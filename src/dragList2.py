@@ -3,6 +3,11 @@
 import wx
 import pickle
 
+#class DragListRow():
+#    def __init__( self, list_ctrl, idx):
+#        self.idx = idx
+#        
+
 class DragList(wx.ListCtrl):
     def __init__(self, *arg, **kw):
         if 'style' in kw and (kw['style']&wx.LC_LIST or kw['style']&wx.LC_REPORT):
@@ -16,7 +21,17 @@ class DragList(wx.ListCtrl):
 
         dt = ListDrop(self._insert)
         self.SetDropTarget(dt)
-
+        
+#    def getItemInfo(self, idx):
+#        """Collect all relevant data of a listitem, and put it in a list"""
+#        l = []
+#        l.append(idx) # We need the original index, so it is easier to eventualy delete it
+#        l.append(self.GetItemData(idx)) # Itemdata
+#        l.append(self.GetItemText(idx)) # Text first column
+#        for i in range(1, self.GetColumnCount()): # Possible extra columns
+#            l.append(self.GetItem(idx, i).GetText())
+#        return l
+        
     def _startDrag(self, e):
         """ Put together a data object for drag-and-drop _from_ this list. """
 
