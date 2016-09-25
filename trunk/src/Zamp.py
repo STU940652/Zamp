@@ -87,9 +87,9 @@ class ZampMain (wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
         
         dl2 = DragList(ctrlpanel, style=wx.LC_REPORT)
-        dl2.InsertColumn(0, "Column #0")
-        dl2.InsertColumn(1, "Column #1", wx.LIST_FORMAT_RIGHT)
-        dl2.InsertColumn(2, "Column #2")
+        dl2.InsertColumn(0, "Name")
+        dl2.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
+        dl2.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
         sizer.Add(dl2, 1, flag=wx.EXPAND)
 
         # Time Slider
@@ -123,6 +123,9 @@ class ZampMain (wx.Frame):
 
         ctrlpanel.SetSizer(sizer)
         self.SetMinSize(minsize)
+        
+        dl2.Append( ["Hello", "00:00:00", "00:00:00"])
+        print (dl2.GetItem(0).GetText())
         
  
     def OpenFile (self, MediaFileName, Play = True):
