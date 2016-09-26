@@ -3,11 +3,6 @@
 import wx
 import pickle
 
-#class DragListRow():
-#    def __init__( self, list_ctrl, idx):
-#        self.idx = idx
-#        
-
 class DragList(wx.ListCtrl):
     def __init__(self, *arg, **kw):
         if 'style' in kw and (kw['style']&wx.LC_LIST or kw['style']&wx.LC_REPORT):
@@ -22,25 +17,35 @@ class DragList(wx.ListCtrl):
         dt = ListDrop(self._insert)
         self.SetDropTarget(dt)
         
-#    def getItemInfo(self, idx):
-#        """Collect all relevant data of a listitem, and put it in a list"""
-#        l = []
-#        l.append(idx) # We need the original index, so it is easier to eventualy delete it
-#        l.append(self.GetItemData(idx)) # Itemdata
-#        l.append(self.GetItemText(idx)) # Text first column
-#        for i in range(1, self.GetColumnCount()): # Possible extra columns
-#            l.append(self.GetItem(idx, i).GetText())
-#        return l
+    def getItemInfo(self, idx):
+        """Collect all relevant data of a listitem, and put it in a dictionary"""
+        l = {}
+        l["idx"] = idx # We need the original index, so it is easier to eventualy delete it
+        l["data"] = self.GetItemData(idx) # Itemdata
+        l["text"] = [ self.GetItemText(idx) ] # Text first column
+        for i in range(1, self.GetColumnCount()): # Possible extra columns
+            l["text"].append(self.GetItem(idx, i).GetText())
+        return l
         
     def _startDrag(self, e):
         """ Put together a data object for drag-and-drop _from_ this list. """
 
-        # Create the data object: Just use plain text.
+        # Create the Custom data object.
         data = wx.CustomDataObject("MediaFileDataObject")
+        l = []
         idx = e.GetIndex()
-        text = self.GetItem(idx).GetText()
-        data.SetData(pickle.dumps(self.GetItem(idx)))
+        l.append(self.getItemInfo(idx))
         
+        # Get any other selected rows
+        idx = -1
+        while True: # find all the selected items and put them in a list
+            idx = self.GetNextItem(idx, wx.LIST_NEXT_ALL, wx.LIST_STATE_SELECTED)
+            if idx == -1:
+                break
+            if idx != e.GetIndex():
+                l.append(self.getItemInfo(idx))
+        data.SetData(pickle.dumps(l))
+            
         # Create drop source and begin drag-and-drop.
         dropSource = wx.DropSource(self)
         dropSource.SetData(data)
@@ -50,10 +55,13 @@ class DragList(wx.ListCtrl):
         if res == wx.DragMove:
             # It's possible we are dragging/dropping from this list to this list.  In which case, the
             # index we are removing may have changed...
-
-            # Find correct position.
-            pos = self.FindItem(idx, text)
-            self.DeleteItem(pos)
+        
+            idx = -1
+            while True: # find all the selected items and put them in a list
+                idx = self.GetNextItem(idx, wx.LIST_NEXT_ALL, wx.LIST_STATE_SELECTED)
+                if idx == -1:
+                    break
+                self.DeleteItem(idx)
 
     def _insert(self, x, y, text):
         """ Insert text at given x, y coordinates --- used with drag-and-drop. """
@@ -78,9 +86,12 @@ class DragList(wx.ListCtrl):
             if y > rect.y + rect.height/2:
                 index += 1
                 
-        if (isinstance( text, wx.ListItem)):
-            text.SetId(index)
-            self.InsertItem(text)
+        if (isinstance( text, list)):
+            for r in text:
+                textList = r["text"]
+                self.InsertItem(index, textList[0])
+                for i in range(1, len(textList)): # Possible extra columns
+                    self.SetItem(index = index, column = i, label = textList[i])             
         else:
             self.InsertItem(index, text)
         
@@ -107,14 +118,12 @@ class ListDrop(wx.FileDropTarget):
     # do something with it.
     def OnData(self, x, y, d):
         # copy the data from the drag source to our data object
-        print ("Hello", self.GetData(), self.GetDataObject(), self.data.GetReceivedFormat().GetType())
         if self.GetData():
             dataobjComp = self.GetDataObject()
             format = self.data.GetReceivedFormat()
             dataobj = dataobjComp.GetObject(format)
 
             if (format.GetType() == 49744): # CustomDataObject
-                print (pickle.loads(dataobj.GetData()))
                 self.setFn(x, y, pickle.loads(dataobj.GetData()))
 
             if (format.GetType() == 13): # TextDataObject
