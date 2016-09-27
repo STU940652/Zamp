@@ -10,7 +10,7 @@ import os.path
 import queue
 import subprocess
 import vlc
-from dragList import DragList
+from FileDragList import FileDragList
 
 # Make sure we are in the correct directory
 application_path = ''
@@ -86,7 +86,7 @@ class ZampMain (wx.Frame):
         ctrlpanel = wx.Panel(self, -1 )
         sizer = wx.BoxSizer(wx.VERTICAL)
         
-        dl2 = DragList(ctrlpanel, style=wx.LC_REPORT)
+        dl2 = FileDragList(ctrlpanel, style=wx.LC_REPORT)
         dl2.InsertColumn(0, "Name")
         dl2.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
         dl2.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
@@ -95,8 +95,8 @@ class ZampMain (wx.Frame):
         # Time Slider
         self.timeslider = wx.Slider(ctrlpanel, -1, 0, 0, 1000)
         self.timeslider.SetRange(0, 1000)
-        self.timeText = wx.TextCtrl(ctrlpanel, size=(100, -1))
-        self.timeToEndText = wx.TextCtrl(ctrlpanel, size=(100, -1))
+        self.timeText = wx.StaticText(ctrlpanel, size=(100, -1))
+        self.timeToEndText = wx.StaticText(ctrlpanel, size=(100, -1))
         next   = wx.Button(ctrlpanel, label="Next")
         pause  = wx.Button(ctrlpanel, label="Pause")
         play   = wx.Button(ctrlpanel, label="Play")
@@ -124,9 +124,7 @@ class ZampMain (wx.Frame):
         ctrlpanel.SetSizer(sizer)
         self.SetMinSize(minsize)
         
-        dl2.Append( ["Hello", "00:00:00", "00:00:00"])
-        print (dl2.GetItem(0).GetText())
-        
+        dl2.Append( ["Hello", "00:00:00", "00:00:00"])        
  
     def OpenFile (self, MediaFileName, Play = True):
         # if a file is already running, then stop it.

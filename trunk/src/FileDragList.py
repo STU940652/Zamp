@@ -2,8 +2,38 @@
 
 import wx
 import pickle
+try:
+    import vlc
+    HAVE_VLC = True
+except:
+    HAVE_VLC = False
+    
+print (vlc.libvlc_get_version())
+    
+def ms_to_hms (ms):
+    try:
+        h = int(ms/(60*60*1000))
+        msl = ms - h*60*60*1000
+        m = int(msl/(60*1000))
+        msl = msl - m*60*1000
+        s = msl/1000.0
+        return "%02i:%02i:%02i" % (h,m,s)
+    except:
+        return ""
+    
+def hms_to_ms (s):
+    d = s.split(':')
+    mult = 1000.0
+    ms = 0
+    try:
+        while len (d):
+            ms = ms + float(d.pop(-1))*mult
+            mult = mult * 60.0
+        return int(ms)
+    except:
+        return 0
 
-class DragList(wx.ListCtrl):
+class FileDragList(wx.ListCtrl):
     def __init__(self, *arg, **kw):
         if 'style' in kw and (kw['style']&wx.LC_LIST or kw['style']&wx.LC_REPORT):
             kw['style'] |= wx.LC_SINGLE_SEL
@@ -93,7 +123,13 @@ class DragList(wx.ListCtrl):
                 for i in range(1, len(textList)): # Possible extra columns
                     self.SetItem(index = index, column = i, label = textList[i])             
         else:
-            self.InsertItem(index, text)
+            media = vlc.Media(text)
+            media.parse()
+            self.InsertItem(index, media.get_meta(vlc.Meta.Title))
+            self.SetItem(index=index, column = 1, label = ms_to_hms(media.get_duration()))
+            print(media.tracks_get().type)
+            
+            #print( media.get_type())
         
 class ListDrop(wx.FileDropTarget):
     """ Drop target for simple lists. """
@@ -132,15 +168,11 @@ class ListDrop(wx.FileDropTarget):
             if (format.GetType() == 15): # FileDataObject
                 for filename in dataobj.GetFilenames():
                     self.setFn(x, y, filename)
-                    
             
         # what is returned signals the source what to do
         # with the original data (move, copy, etc.)  In this
         # case we just return the suggested value given to us.
         return d
-        
-    def OnDropFiles(self, x, y, filenames):
-        print (filenames)
 
 if __name__ == '__main__':
     items = ['Foo', 'Bar', 'Baz', 'Zif', 'Zaf', 'Zof']
