@@ -2201,7 +2201,7 @@ class Media(_Ctype):
         """
         mediaTrack_pp = ctypes.POINTER(MediaTrack)()
         n = libvlc_media_tracks_get(self, ctypes.byref(mediaTrack_pp))
-        info = ctypes.cast(ctypes.mediaTrack_pp, ctypes.POINTER(ctypes.POINTER(MediaTrack) * n))
+        info = ctypes.cast(mediaTrack_pp, ctypes.POINTER(ctypes.POINTER(MediaTrack) * n))
         return info
 
 
