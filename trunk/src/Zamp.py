@@ -10,7 +10,7 @@ import os.path
 import queue
 import subprocess
 import vlc
-import time
+import datetime
 from FileDragList import FileDragList
 
 # Make sure we are in the correct directory
@@ -88,10 +88,10 @@ class ZampMain (wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
         
         self.MediaList = FileDragList(ctrlpanel, style=wx.LC_REPORT)
-        self.MediaList.InsertColumn(0, "Name")
+        self.MediaList.InsertColumn(0, "Name", width=200)
         self.MediaList.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
         self.MediaList.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
-        sizer.Add(dl2, 1, flag=wx.EXPAND)
+        sizer.Add(self.MediaList, 1, flag=wx.EXPAND)
 
         # Time Slider
         self.timeslider = wx.Slider(ctrlpanel, -1, 0, 0, 1000)
@@ -133,17 +133,16 @@ class ZampMain (wx.Frame):
         ctrlpanel.SetSizer(sizer)
         self.SetMinSize(minsize)
         
-        dl2.Append( ["Hello", "00:00:00", "00:00:00"])        
+        self.MediaList.Append( ["Hello", "00:00:00", "00:00:00"])        
  
     def UpdateTimes (self, evt=None):
-        print ("Hello")
         # Clean up EndTime
-        end_time = time.strptime(self.EndTime.GetValue(), "%I:%M:%S %p")
-        self.EndTime.SetValue(time.strftime("%I:%M:%S %p", end_time))
+        end_time = datetime.datetime.strptime(self.EndTime.GetValue(), "%I:%M:%S %p")
+        self.EndTime.SetValue(end_time.strftime("%I:%M:%S %p"))
         
-        for i in range(self.MediaList.GetCount(), 0 , -1):
-            end_time -= hms_to_ms(self.MediaList.GetItemData(i,1))/1000
-            self.MediaList.SetItemData(i,2, ms_to_hms(end_time.as_seconds()*1000))
+        for i in range(self.MediaList.GetItemCount()-1, -1, -1):
+            end_time -= datetime.timedelta(milliseconds = hms_to_ms(self.MediaList.GetItem(i,1).GetText()))
+            self.MediaList.SetItem(i, 2, end_time.strftime("%I:%M:%S %p"))
         
     def OpenFile (self, MediaFileName, Play = True):
         # if a file is already running, then stop it.
