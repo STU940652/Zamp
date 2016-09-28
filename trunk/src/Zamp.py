@@ -10,6 +10,7 @@ import os.path
 import queue
 import subprocess
 import vlc
+import time
 from FileDragList import FileDragList
 
 # Make sure we are in the correct directory
@@ -86,10 +87,10 @@ class ZampMain (wx.Frame):
         ctrlpanel = wx.Panel(self, -1 )
         sizer = wx.BoxSizer(wx.VERTICAL)
         
-        dl2 = FileDragList(ctrlpanel, style=wx.LC_REPORT)
-        dl2.InsertColumn(0, "Name")
-        dl2.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
-        dl2.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
+        self.MediaList = FileDragList(ctrlpanel, style=wx.LC_REPORT)
+        self.MediaList.InsertColumn(0, "Name")
+        self.MediaList.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
+        self.MediaList.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
         sizer.Add(dl2, 1, flag=wx.EXPAND)
 
         # Time Slider
@@ -120,12 +121,30 @@ class ZampMain (wx.Frame):
         box2.Add(volume)
         sizer.Add(box2, flag=wx.EXPAND)
         box2.Add(self.volslider, flag=wx.TOP | wx.LEFT, border=5)
+        
+        # box3 is for the end time
+        box3 = wx.BoxSizer( wx.HORIZONTAL)
+        box3.Add(wx.StaticText(ctrlpanel, label="End Time"))
+        self.EndTime = wx.TextCtrl( ctrlpanel, style=wx.TE_PROCESS_ENTER)
+        self.Bind(wx.EVT_TEXT_ENTER, self.UpdateTimes, self.EndTime)
+        box3.Add( self.EndTime)
+        sizer.Add( box3, flag=wx.EXPAND)
 
         ctrlpanel.SetSizer(sizer)
         self.SetMinSize(minsize)
         
         dl2.Append( ["Hello", "00:00:00", "00:00:00"])        
  
+    def UpdateTimes (self, evt=None):
+        print ("Hello")
+        # Clean up EndTime
+        end_time = time.strptime(self.EndTime.GetValue(), "%I:%M:%S %p")
+        self.EndTime.SetValue(time.strftime("%I:%M:%S %p", end_time))
+        
+        for i in range(self.MediaList.GetCount(), 0 , -1):
+            end_time -= hms_to_ms(self.MediaList.GetItemData(i,1))/1000
+            self.MediaList.SetItemData(i,2, ms_to_hms(end_time.as_seconds()*1000))
+        
     def OpenFile (self, MediaFileName, Play = True):
         # if a file is already running, then stop it.
         self.OnStop(None)
