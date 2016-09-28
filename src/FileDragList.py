@@ -121,14 +121,15 @@ class FileDragList(wx.ListCtrl):
                 textList = r["text"]
                 self.InsertItem(index, textList[0])
                 for i in range(1, len(textList)): # Possible extra columns
-                    self.SetItem(index = index, column = i, label = textList[i])             
+                    self.SetItem(index = index, column = i, label = textList[i]) 
+                self.SetItemData(index, l["data"])
         else:
             media = vlc.Media(text)
             media.parse()
             self.InsertItem(index, media.get_meta(vlc.Meta.Title))
             self.SetItem(index=index, column = 1, label = ms_to_hms(media.get_duration()))
-            print(media.tracks_get().type)
-            
+            self.SetItemData(index, text) # Store the filename
+            #print(media.tracks_get().type) # Doesn't work.  Grrrr.
             #print( media.get_type())
         
 class ListDrop(wx.FileDropTarget):
