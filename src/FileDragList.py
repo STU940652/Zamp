@@ -2,6 +2,8 @@
 
 import wx
 import pickle
+import datetime
+
 try:
     import vlc
     HAVE_VLC = True
@@ -46,6 +48,8 @@ class FileDragList(wx.ListCtrl):
 
         dt = ListDrop(self._insert)
         self.SetDropTarget(dt)
+        self.ItemId = 0
+        self.ItemDataCollection = {}
         
     def getItemInfo(self, idx):
         """Collect all relevant data of a listitem, and put it in a dictionary"""
@@ -95,7 +99,6 @@ class FileDragList(wx.ListCtrl):
 
     def _insert(self, x, y, text):
         """ Insert text at given x, y coordinates --- used with drag-and-drop. """
-
         # Clean text.
         # import string
         # text = ''.join([x for x in text if x in (string.ascii_letters + string.digits + string.punctuation + ' ')])
@@ -117,20 +120,33 @@ class FileDragList(wx.ListCtrl):
                 index += 1
                 
         if (isinstance( text, list)):
+            # This is a List Item
             for r in text:
                 textList = r["text"]
                 self.InsertItem(index, textList[0])
                 for i in range(1, len(textList)): # Possible extra columns
                     self.SetItem(index = index, column = i, label = textList[i]) 
-                self.SetItemData(index, l["data"])
+                self.SetItemData(index, r["data"])
         else:
             media = vlc.Media(text)
             media.parse()
             self.InsertItem(index, media.get_meta(vlc.Meta.Title))
             self.SetItem(index=index, column = 1, label = ms_to_hms(media.get_duration()))
+            self.SetItemData(index, self.ItemId)
+            self.ItemDataCollection[self.ItemId] = {
+                    "duration":datetime.timedelta(milliseconds = media.get_duration()), 
+                    "media":media, 
+                    "filename":text}
+            self.ItemId += 1
             #self.SetItemData(index, text) # Store the filename
             #print(media.tracks_get().type) # Doesn't work.  Grrrr.
             #print( media.get_type())
+            
+    def GetItemCollectionData (self, index, key):
+        return self.ItemDataCollection[self.GetItemData(index)][key]
+        
+    def SetItemCollectionData (self, index, key, value):
+        self.ItemDataCollection[self.GetItemData(index)][key] = value
         
 class ListDrop(wx.FileDropTarget):
     """ Drop target for simple lists. """
@@ -160,15 +176,16 @@ class ListDrop(wx.FileDropTarget):
             format = self.data.GetReceivedFormat()
             dataobj = dataobjComp.GetObject(format)
 
-            if (format.GetType() == 49744): # CustomDataObject
-                self.setFn(x, y, pickle.loads(dataobj.GetData()))
-
             if (format.GetType() == 13): # TextDataObject
                 self.setFn(x, y, dataobj.GetText())
 
-            if (format.GetType() == 15): # FileDataObject
+            elif (format.GetType() == 15): # FileDataObject
                 for filename in dataobj.GetFilenames():
                     self.setFn(x, y, filename)
+                    
+            else: # CustomDataObject
+                self.setFn(x, y, pickle.loads(dataobj.GetData()))
+
             
         # what is returned signals the source what to do
         # with the original data (move, copy, etc.)  In this

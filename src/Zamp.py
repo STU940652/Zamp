@@ -92,6 +92,8 @@ class ZampMain (wx.Frame):
         self.MediaList.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
         self.MediaList.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
         sizer.Add(self.MediaList, 1, flag=wx.EXPAND)
+        self.Bind(wx.EVT_LIST_INSERT_ITEM, self.UpdateTimes, self.MediaList)
+        self.Bind(wx.EVT_LIST_DELETE_ITEM, self.UpdateTimes, self.MediaList)
 
         # Time Slider
         self.timeslider = wx.Slider(ctrlpanel, -1, 0, 0, 1000)
@@ -126,23 +128,43 @@ class ZampMain (wx.Frame):
         box3 = wx.BoxSizer( wx.HORIZONTAL)
         box3.Add(wx.StaticText(ctrlpanel, label="End Time"))
         self.EndTime = wx.TextCtrl( ctrlpanel, style=wx.TE_PROCESS_ENTER)
-        self.Bind(wx.EVT_TEXT_ENTER, self.UpdateTimes, self.EndTime)
+        self.Bind(wx.EVT_TEXT_ENTER, self.OnEndTimeChange, self.EndTime)
         box3.Add( self.EndTime)
         sizer.Add( box3, flag=wx.EXPAND)
 
         ctrlpanel.SetSizer(sizer)
         self.SetMinSize(minsize)
         
-        self.MediaList.Append( ["Hello", "00:00:00", "00:00:00"])        
- 
-    def UpdateTimes (self, evt=None):
+    def OnEndTimeChange (self, evt):
         # Clean up EndTime
-        end_time = datetime.datetime.strptime(self.EndTime.GetValue(), "%I:%M:%S %p")
+        end_time = self.EndDateTime()
         self.EndTime.SetValue(end_time.strftime("%I:%M:%S %p"))
         
+        self.UpdateTimes()
+    
+    def UpdateTimes (self, evt=None):
+        end_time = self.EndDateTime()
         for i in range(self.MediaList.GetItemCount()-1, -1, -1):
-            end_time -= datetime.timedelta(milliseconds = hms_to_ms(self.MediaList.GetItem(i,1).GetText()))
-            self.MediaList.SetItem(i, 2, end_time.strftime("%I:%M:%S %p"))
+            if (end_time > datetime.datetime.now()):
+                end_time -= self.MediaList.GetItemCollectionData( i, "duration")
+                self.MediaList.SetItemCollectionData( i, "end_time", end_time)
+                self.MediaList.SetItem( i, 2, end_time.strftime("%I:%M:%S %p"))
+            else:
+                self.MediaList.SetItem( i, 2, "")
+        
+    def EndDateTime (self):
+        # Get the time
+        end_time = datetime.datetime.strptime(self.EndTime.GetValue(), "%I:%M:%S %p")
+        
+        # Calculate the date.  It must be in the future.  Start with today.
+        now = datetime.datetime.now()
+        end_time = end_time.replace(year=now.year, month=now.month, day=now.day, tzinfo=now.tzinfo) 
+        
+        # If it is in the past, change it to tomorrow
+        if (end_time < now):
+            end_time += datetime.timedelta(days = 1)
+            
+        return end_time
         
     def OpenFile (self, MediaFileName, Play = True):
         # if a file is already running, then stop it.
@@ -223,40 +245,22 @@ class ZampMain (wx.Frame):
         if self.player.set_time(StartFrame) == -1:
             self.errorDialog("Failed to set time")
             
-    def OnStartFill(self, evt):
-        """
-        """
 
-        self.StartTime.SetValue(self.timeText.GetValue())
-                
-    def OnStopFill(self, evt):
-        """
-        """
-        self.StopTime.SetValue(self.timeText.GetValue())
-
-    def OnStopPlayTo(self, evt):
-        """
-        """
-        StopFrame = hms_to_ms (self.StopTime.GetValue())
-        StartFrame = StopFrame - 5000
-        self.TimeToStop = StopFrame
-
-        self.player.stop()
-        if StartFrame < 0:
-            StartFram = 0
-        if self.player.play() == -1:
-            self.errorDialog("Unable to play.")
-        else:
-            self.timer.Start(milliseconds=16)  
-            
-        if self.player.set_time(StartFrame) == -1:
-            self.errorDialog("Failed to set time")
-                
     def OnPlay(self, evt):
         """Toggle the status to Play/Pause.
 
         If no file is loaded, open the dialog window.
         """
+        
+        # First find the file to play
+        
+        # Find the time to start at
+        
+        # Play
+        
+        # And set time
+        return
+        
         self.TimeToStop = None
         # check if there is a file to play, otherwise open a
         # wx.FileDialog to select a file
