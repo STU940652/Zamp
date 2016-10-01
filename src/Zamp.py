@@ -87,13 +87,13 @@ class ZampMain (wx.Frame):
         ctrlpanel = wx.Panel(self, -1 )
         sizer = wx.BoxSizer(wx.VERTICAL)
         
-        self.MediaList = FileDragList(ctrlpanel, style=wx.LC_REPORT)
+        self.MediaList = FileDragList(AfterChange=self.UpdateTimes, parent=ctrlpanel, style=wx.LC_REPORT)
         self.MediaList.InsertColumn(0, "Name", width=200)
         self.MediaList.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
         self.MediaList.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
         sizer.Add(self.MediaList, 1, flag=wx.EXPAND)
-        self.Bind(wx.EVT_LIST_INSERT_ITEM, self.UpdateTimes, self.MediaList)
-        self.Bind(wx.EVT_LIST_DELETE_ITEM, self.UpdateTimes, self.MediaList)
+        #self.Bind(wx.EVT_LIST_INSERT_ITEM, self.UpdateTimes, self.MediaList)
+        #self.Bind(wx.EVT_LIST_DELETE_ITEM, self.UpdateTimes, self.MediaList)
 
         # Time Slider
         self.timeslider = wx.Slider(ctrlpanel, -1, 0, 0, 1000)
@@ -124,6 +124,9 @@ class ZampMain (wx.Frame):
         sizer.Add(box2, flag=wx.EXPAND)
         box2.Add(self.volslider, flag=wx.TOP | wx.LEFT, border=5)
         
+        self.Bind(wx.EVT_BUTTON, self.OnPlay, play)
+        self.Bind(wx.EVT_BUTTON, self.OnStop, stop)
+        
         # box3 is for the end time
         box3 = wx.BoxSizer( wx.HORIZONTAL)
         box3.Add(wx.StaticText(ctrlpanel, label="End Time"))
@@ -147,7 +150,7 @@ class ZampMain (wx.Frame):
         for i in range(self.MediaList.GetItemCount()-1, -1, -1):
             if (end_time > datetime.datetime.now()):
                 end_time -= self.MediaList.GetItemCollectionData( i, "duration")
-                self.MediaList.SetItemCollectionData( i, "end_time", end_time)
+                self.MediaList.SetItemCollectionData( i, "start_time", end_time)
                 self.MediaList.SetItem( i, 2, end_time.strftime("%I:%M:%S %p"))
             else:
                 self.MediaList.SetItem( i, 2, "")
@@ -215,49 +218,30 @@ class ZampMain (wx.Frame):
         # finally destroy the dialog
         dlg.Destroy()
         
-    def OnStartPlayFrom(self, evt):
-        """
-        """
-        StartFrame = hms_to_ms (self.StartTime.GetValue())
-        self.player.stop()
-        if self.player.play() == -1:
-            self.errorDialog("Unable to play.")
-        else:
-            self.timer.Start(milliseconds=100)
-        if self.player.set_time(StartFrame) == -1:
-            self.errorDialog("Failed to set time")
-
-    def OnStartPlayTo(self, evt):
-        """
-        """
-        StopFrame = hms_to_ms (self.StartTime.GetValue())
-        StartFrame = StopFrame - 5000
-        self.TimeToStop = StopFrame
-
-        self.player.stop()
-        if StartFrame < 0:
-            StartFram = 0
-        if self.player.play() == -1:
-            self.errorDialog("Unable to play.")
-        else:
-            self.timer.Start(milliseconds=16)  
-            
-        if self.player.set_time(StartFrame) == -1:
-            self.errorDialog("Failed to set time")
-            
-
-    def OnPlay(self, evt):
+    def OnPlay(self, evt=None):
         """Toggle the status to Play/Pause.
 
         If no file is loaded, open the dialog window.
         """
         
         # First find the file to play
-        
-        # Find the time to start at
-        
+        this_media = None
+        start_at = None
+        for i in range(self.MediaList.GetItemCount()-1, -1, -1):
+            if (self.MediaList.GetItemCollectionData( i, "start_time") < datetime.datetime.now()):
+                this_media = self.MediaList.GetItemCollectionData( i, "media")
+                # Find the time to start at
+                start_at = datetime.datetime.now() - self.MediaList.GetItemCollectionData( i, "start_time")
+                break
+
         # Play
-        
+        self.player.stop()
+        if self.player.play() == -1:
+            self.errorDialog("Unable to play.")
+        else:
+            self.timer.Start(milliseconds=100)
+        if self.player.set_time(StartFrame) == -1:
+            self.errorDialog("Failed to set time")       
         # And set time
         return
         
@@ -284,13 +268,7 @@ class ZampMain (wx.Frame):
         self.player.stop()
         # reset the time slider
         self.timeslider.SetValue(0)
-        self.timer.Stop()
-        self.TimeToStop = None
-
-    def OnNext(self, evt):
-        """Next Fame.
-        """
-        self.player.next_frame()
+        #self.timer.Stop()
 
     def OnTimer(self, evt):
         """Update the time slider according to the current movie time.
@@ -300,16 +278,6 @@ class ZampMain (wx.Frame):
         length = self.player.get_length()
         self.timeslider.SetRange(-1, length)
         
-        # Set Crop bar
-        (width, height) = self.player.video_get_size()
-        if (width, height) != (self.width, self.height):
-            (self.width, self.height) = (width, height)
-            print (width, height)
-            self.cropslider.SetScrollbar((width-height*4/3)/2, height*4/3, width, 20)
-            print (width/2, height*4/3, width, 20)
-            
-        self.VideoSize = (width, height)
-
         # update the time on the slider
         CurrentTime = self.player.get_time()
         self.timeslider.SetValue(CurrentTime)
