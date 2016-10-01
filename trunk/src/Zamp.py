@@ -80,6 +80,10 @@ class ZampMain (wx.Frame):
         # Status Bar
         self.StatusBar = self.CreateStatusBar(2)
 
+        # finally create the timer, which updates the timeslider
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
+
         # VLC player controls
         self.Instance = vlc.Instance()
         self.player = self.Instance.media_player_new()  
@@ -235,27 +239,20 @@ class ZampMain (wx.Frame):
                 break
 
         # Play
-        self.player.stop()
-        if self.player.play() == -1:
-            self.errorDialog("Unable to play.")
-        else:
-            self.timer.Start(milliseconds=100)
-        if self.player.set_time(StartFrame) == -1:
-            self.errorDialog("Failed to set time")       
-        # And set time
-        return
-        
-        self.TimeToStop = None
-        # check if there is a file to play, otherwise open a
-        # wx.FileDialog to select a file
-        if not self.player.get_media():
-            self.OnOpen(None)
-        else:
-            # Try to launch the media, if this fails display an error message
+        if this_media:
+            self.player.stop()
+            self.player.set_media(this_media)
             if self.player.play() == -1:
                 self.errorDialog("Unable to play.")
-            else:
-                self.timer.Start(milliseconds=100)
+                return
+
+            self.timer.Start(milliseconds=100)
+
+            # And set time
+            if self.player.set_time(int(start_at.total_seconds() * 1000)) == -1:
+            #if self.player.set_time(int(1)) == -1:
+                self.errorDialog("Failed to set time")
+                return
 
     def OnPause(self, evt):
         """Pause the player.
@@ -281,13 +278,8 @@ class ZampMain (wx.Frame):
         # update the time on the slider
         CurrentTime = self.player.get_time()
         self.timeslider.SetValue(CurrentTime)
-        self.timeText.SetValue(ms_to_hms(CurrentTime))
-        
-        # See if we should stop
-        if self.TimeToStop:
-            if (CurrentTime >= self.TimeToStop):
-                self.player.set_pause(True)
-                self.TimeToStop = None
+        self.timeText.SetLabel(ms_to_hms(CurrentTime))     
+        self.timeToEndText.SetLabel(ms_to_hms(length - CurrentTime))     
 
     def OnSetTime(self, evt):
         """Set the volume according to the volume sider.
