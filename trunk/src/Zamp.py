@@ -60,6 +60,7 @@ class ZampMain (wx.Frame):
                           pos=wx.DefaultPosition, size=(400,300))
         # Some variables
         self.delay_between_songs = datetime.timedelta(seconds=2)
+        self.IsPlayingToEndTime = False
         
         # Menu Bar
         #   File Menu
@@ -234,17 +235,28 @@ class ZampMain (wx.Frame):
 
         If no file is loaded, open the dialog window.
         """
-        
+        self.StartNextSong()
+        self.IsPlayingToEndTime = True
+        self.timer.Start(milliseconds=100)
+
+    def StartNextSong( self):
         # First find the file to play
         this_media = None
+        this_duration = None
         start_at = None
+        next_start_at = None
         for i in range(self.MediaList.GetItemCount()-1, -1, -1):
             if (self.MediaList.GetItemCollectionData( i, "start_time") < datetime.datetime.now()):
                 this_media = self.MediaList.GetItemCollectionData( i, "media")
+                this_duration = self.MediaList.GetItemCollectionData( i, "duration")
                 # Find the time to start at
                 start_at = datetime.datetime.now() - self.MediaList.GetItemCollectionData( i, "start_time")
                 break
-
+            next_start_at = self.MediaList.GetItemCollectionData( i, "start_time")
+            
+        if this_media and (start_at > duration):
+            this_media = None
+        
         # Play
         if this_media:
             self.player.stop()
@@ -253,17 +265,29 @@ class ZampMain (wx.Frame):
                 self.errorDialog("Unable to play.")
                 return
 
-            self.timer.Start(milliseconds=100)
-
             # And set time
             if self.player.set_time(int(start_at.total_seconds() * 1000)) == -1:
             #if self.player.set_time(int(1)) == -1:
                 self.errorDialog("Failed to set time")
                 return
+                
+            title = self.player.get_title()
+            #  if an error was encountred while retriving the title, then use
+            #  filename
+            if title == -1:
+                title = os.path.basename(self.MediaList.GetItemCollectionData( i, "filename"))
+            self.StatusBar.SetStatusText("%s - wxVLCplayer" % title)
+        
+        else:
+            if next_start_at:
+                self.StatusBar.SetStatusText("Waiting...")
+            else:
+                self.StatusBar.SetStatusText("Waiting...")
 
     def OnStop(self, evt):
         """Stop the player.
         """
+        self.IsPlayingToEndTime = False
         self.player.stop()
         # reset the time slider
         self.timeslider.SetValue(0)
@@ -272,6 +296,11 @@ class ZampMain (wx.Frame):
     def OnTimer(self, evt):
         """Update the time slider according to the current movie time.
         """
+        
+        # See if we need to start the next song
+        if self.IsPlayingToEndTime and not self.player.is_playing():
+            self.StartNextSong()
+        
         # since the self.player.get_length can change while playing,
         # re-set the timeslider to the correct range.
         length = self.player.get_length()
