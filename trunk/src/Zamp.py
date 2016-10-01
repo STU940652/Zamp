@@ -56,9 +56,11 @@ def hms_to_ms (s):
 
 class ZampMain (wx.Frame):
     def __init__ (self, title):
-        minsize = (600,300)
         wx.Frame.__init__(self, None, -1, title,
-                          pos=wx.DefaultPosition, size=minsize)
+                          pos=wx.DefaultPosition, size=(400,300))
+        # Some variables
+        self.delay_between_songs = datetime.timedelta(seconds=2)
+        
         # Menu Bar
         #   File Menu
         self.frame_menubar = wx.MenuBar()
@@ -104,8 +106,6 @@ class ZampMain (wx.Frame):
         self.timeslider.SetRange(0, 1000)
         self.timeText = wx.StaticText(ctrlpanel, size=(100, -1))
         self.timeToEndText = wx.StaticText(ctrlpanel, size=(100, -1))
-        next   = wx.Button(ctrlpanel, label="Next")
-        pause  = wx.Button(ctrlpanel, label="Pause")
         play   = wx.Button(ctrlpanel, label="Play")
         stop   = wx.Button(ctrlpanel, label="Stop")
         volume = wx.Button(ctrlpanel, label="Volume")
@@ -120,8 +120,6 @@ class ZampMain (wx.Frame):
         # box2 contains some buttons and the volume controls
         box2 = wx.BoxSizer(wx.HORIZONTAL)
         box2.Add(play, flag=wx.RIGHT, border=5)
-        box2.Add(pause)
-        box2.Add(next)
         box2.Add(stop)
         box2.Add((-1, -1), 1)
         box2.Add(volume)
@@ -138,14 +136,22 @@ class ZampMain (wx.Frame):
         self.Bind(wx.EVT_TEXT_ENTER, self.OnEndTimeChange, self.EndTime)
         box3.Add( self.EndTime)
         sizer.Add( box3, flag=wx.EXPAND)
+        
+        # Pre-populate End Time
+        about_a_half_hour_from_now = datetime.datetime.now().replace(second = 5) + datetime.timedelta(minutes = 30)
+        about_a_half_hour_from_now = about_a_half_hour_from_now.replace( minute = round(about_a_half_hour_from_now.minute/30.0) * 30)
+        self.last_end_time = about_a_half_hour_from_now.strftime("%I:%M:%S %p")
+        self.EndTime.SetValue(self.last_end_time)
 
         ctrlpanel.SetSizer(sizer)
-        self.SetMinSize(minsize)
+        self.SetMinSize( (300,200) )
         
     def OnEndTimeChange (self, evt):
         # Clean up EndTime
         end_time = self.EndDateTime()
         self.EndTime.SetValue(end_time.strftime("%I:%M:%S %p"))
+        
+        #self.EndTime.SetValue(self.last_end_time)
         
         self.UpdateTimes()
     
@@ -156,6 +162,7 @@ class ZampMain (wx.Frame):
                 end_time -= self.MediaList.GetItemCollectionData( i, "duration")
                 self.MediaList.SetItemCollectionData( i, "start_time", end_time)
                 self.MediaList.SetItem( i, 2, end_time.strftime("%I:%M:%S %p"))
+                end_time -= self.delay_between_songs
             else:
                 self.MediaList.SetItem( i, 2, "")
         
@@ -254,18 +261,13 @@ class ZampMain (wx.Frame):
                 self.errorDialog("Failed to set time")
                 return
 
-    def OnPause(self, evt):
-        """Pause the player.
-        """
-        self.player.pause()
-
     def OnStop(self, evt):
         """Stop the player.
         """
         self.player.stop()
         # reset the time slider
         self.timeslider.SetValue(0)
-        #self.timer.Stop()
+        self.timer.Stop()
 
     def OnTimer(self, evt):
         """Update the time slider according to the current movie time.
