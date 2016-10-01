@@ -36,7 +36,7 @@ def hms_to_ms (s):
         return 0
 
 class FileDragList(wx.ListCtrl):
-    def __init__(self, *arg, **kw):
+    def __init__(self, AfterChange=None, *arg, **kw):
         if 'style' in kw and (kw['style']&wx.LC_LIST or kw['style']&wx.LC_REPORT):
             kw['style'] |= wx.LC_SINGLE_SEL
         else:
@@ -50,6 +50,7 @@ class FileDragList(wx.ListCtrl):
         self.SetDropTarget(dt)
         self.ItemId = 0
         self.ItemDataCollection = {}
+        self.AfterChange = AfterChange
         
     def getItemInfo(self, idx):
         """Collect all relevant data of a listitem, and put it in a dictionary"""
@@ -96,6 +97,8 @@ class FileDragList(wx.ListCtrl):
                 if idx == -1:
                     break
                 self.DeleteItem(idx)
+                if self.AfterChange:
+                    self.AfterChange()
 
     def _insert(self, x, y, text):
         """ Insert text at given x, y coordinates --- used with drag-and-drop. """
@@ -141,6 +144,8 @@ class FileDragList(wx.ListCtrl):
             #self.SetItemData(index, text) # Store the filename
             #print(media.tracks_get().type) # Doesn't work.  Grrrr.
             #print( media.get_type())
+        if self.AfterChange:
+            self.AfterChange()
             
     def GetItemCollectionData (self, index, key):
         return self.ItemDataCollection[self.GetItemData(index)][key]
