@@ -139,10 +139,10 @@ class ZampMain (wx.Frame):
         sizer.Add( box3, flag=wx.EXPAND)
         
         # Pre-populate End Time
-        about_a_half_hour_from_now = datetime.datetime.now().replace(second = 5) + datetime.timedelta(minutes = 30)
-        about_a_half_hour_from_now = about_a_half_hour_from_now.replace( minute = round(about_a_half_hour_from_now.minute/30.0) * 30)
-        self.last_end_time = about_a_half_hour_from_now.strftime("%I:%M:%S %p")
-        self.EndTime.SetValue(self.last_end_time)
+        about_a_half_hour_from_now = datetime.datetime.now().replace(second = 5) + \
+                                     datetime.timedelta(minutes = ((30-datetime.datetime.now().minute%30) + 30))
+        self.last_end_time = about_a_half_hour_from_now
+        self.EndTime.SetValue(about_a_half_hour_from_now.strftime("%I:%M:%S %p"))
 
         ctrlpanel.SetSizer(sizer)
         self.SetMinSize( (300,200) )
@@ -151,8 +151,6 @@ class ZampMain (wx.Frame):
         # Clean up EndTime
         end_time = self.EndDateTime()
         self.EndTime.SetValue(end_time.strftime("%I:%M:%S %p"))
-        
-        #self.EndTime.SetValue(self.last_end_time)
         
         self.UpdateTimes()
     
@@ -169,7 +167,12 @@ class ZampMain (wx.Frame):
         
     def EndDateTime (self):
         # Get the time
-        end_time = datetime.datetime.strptime(self.EndTime.GetValue(), "%I:%M:%S %p")
+        try:
+            end_time = datetime.datetime.strptime(self.EndTime.GetValue(), "%I:%M:%S %p")
+        except ValueError:
+            end_time = self.last_end_time
+            
+        self.last_end_time = end_time
         
         # Calculate the date.  It must be in the future.  Start with today.
         now = datetime.datetime.now()
@@ -241,6 +244,10 @@ class ZampMain (wx.Frame):
         self.player.audio_set_volume(100)
 
     def StartNextSong( self):
+        # Clear item colors
+        for i in range( self.MediaList.GetItemCount()):
+            self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("BLACK"))
+    
         # First find the file to play
         this_media = None
         this_duration = None
@@ -252,6 +259,9 @@ class ZampMain (wx.Frame):
                 this_duration = self.MediaList.GetItemCollectionData( i, "duration")
                 # Find the time to start at
                 start_at = datetime.datetime.now() - self.MediaList.GetItemCollectionData( i, "start_time")
+                # Highlight the song playing
+                self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("RED"))  
+        
                 break
             next_start_at = self.MediaList.GetItemCollectionData( i, "start_time")
             
@@ -277,41 +287,51 @@ class ZampMain (wx.Frame):
             #  filename
             if title == -1:
                 title = os.path.basename(self.MediaList.GetItemCollectionData( i, "filename"))
-            self.StatusBar.SetStatusText("%s - wxVLCplayer" % title)
-        
+            self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( i, "media").get_meta(vlc.Meta.Title))
+            
         else:
-            if next_start_at:
-                self.StatusBar.SetStatusText("Waiting...")
-            else:
-                self.StatusBar.SetStatusText("Waiting...")
+            self.StatusBar.SetStatusText("Waiting...")     
+            return (next_start_at - datetime.datetime.now())
 
     def OnStop(self, evt):
         """Stop the player.
         """
         self.IsPlayingToEndTime = False
         self.player.stop()
-        # reset the time slider
-        self.timeslider.SetValue(0)
         self.timer.Stop()
-
+        self.StatusBar.SetStatusText("")
+        self.timeslider.SetValue(0)
+        self.timeText.SetLabel("")
+        self.timeToEndText.SetLabel("")
+            
     def OnTimer(self, evt):
         """Update the time slider according to the current movie time.
         """
-        
         # See if we need to start the next song
         if self.IsPlayingToEndTime and not self.player.is_playing():
-            self.StartNextSong()
+            time_until_start = self.StartNextSong()
         
-        # since the self.player.get_length can change while playing,
-        # re-set the timeslider to the correct range.
-        length = self.player.get_length()
-        self.timeslider.SetRange(-1, length)
+        if self.player.is_playing():
+            # since the self.player.get_length can change while playing,
+            # re-set the timeslider to the correct range.
+            length = self.player.get_length()
+            self.timeslider.SetRange(-1, length)
+            
+            # update the time on the slider
+            CurrentTime = self.player.get_time()
+            self.timeslider.SetValue(CurrentTime)
+            self.timeText.SetLabel(ms_to_hms(CurrentTime))     
+            self.timeToEndText.SetLabel(ms_to_hms(length - CurrentTime))
         
-        # update the time on the slider
-        CurrentTime = self.player.get_time()
-        self.timeslider.SetValue(CurrentTime)
-        self.timeText.SetLabel(ms_to_hms(CurrentTime))     
-        self.timeToEndText.SetLabel(ms_to_hms(length - CurrentTime))     
+        elif time_until_start:
+            self.timeslider.SetValue(0)
+            self.timeText.SetLabel("")
+            self.timeToEndText.SetLabel(ms_to_hms(time_until_start.total_seconds() * 1000))
+            
+        else:
+            self.timeslider.SetValue(0)
+            self.timeText.SetLabel("")
+            self.timeToEndText.SetLabel("")
 
     def OnSetTime(self, evt):
         """Set the volume according to the volume sider.
