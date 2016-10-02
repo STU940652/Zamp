@@ -238,6 +238,7 @@ class ZampMain (wx.Frame):
         self.StartNextSong()
         self.IsPlayingToEndTime = True
         self.timer.Start(milliseconds=100)
+        self.player.audio_set_volume(100)
 
     def StartNextSong( self):
         # First find the file to play
@@ -254,7 +255,7 @@ class ZampMain (wx.Frame):
                 break
             next_start_at = self.MediaList.GetItemCollectionData( i, "start_time")
             
-        if this_media and (start_at > duration):
+        if this_media and (start_at > this_duration):
             this_media = None
         
         # Play
