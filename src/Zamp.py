@@ -111,14 +111,13 @@ class ZampMain (wx.Frame):
         self.MediaList.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
         self.MediaList.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
         sizer.Add(self.MediaList, 1, flag=wx.EXPAND)
-        #self.Bind(wx.EVT_LIST_INSERT_ITEM, self.UpdateTimes, self.MediaList)
-        #self.Bind(wx.EVT_LIST_DELETE_ITEM, self.UpdateTimes, self.MediaList)
+        self.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnRightClick, self.MediaList)
 
         # Time Slider
         self.timeslider = wx.Slider(ctrlpanel, -1, 0, 0, 1000)
         self.timeslider.SetRange(0, 1000)
-        self.timeText = wx.StaticText(ctrlpanel, size=(100, -1))
-        self.timeToEndText = wx.StaticText(ctrlpanel, size=(100, -1))
+        self.timeText = wx.StaticText(ctrlpanel, size=(70, -1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
+        self.timeToEndText = wx.StaticText(ctrlpanel, size=(70, -1), style=wx.ST_NO_AUTORESIZE)
         play   = wx.Button(ctrlpanel, label="Play")
         stop   = wx.Button(ctrlpanel, label="Stop")
         volume = wx.Button(ctrlpanel, label="Volume")
@@ -378,6 +377,33 @@ class ZampMain (wx.Frame):
         """Closes the window.
         """
         self.Close()
+        
+    def OnRightClick(self, event):
+        self.ItemIndexRightClicked = event.GetIndex()
+        
+        self.menuItems = []     
+        #self.menuItems.append((wx.NewId(),'Play This'))
+        #self.menuItems.append((wx.NewId(),'Play From Here'))
+        self.menuItems.append((wx.NewId(),'Delete'))
+            
+        menu = wx.Menu()
+        for (id,nm) in self.menuItems:
+            menu.Append(id,nm)
+            menu.Bind(wx.EVT_MENU, self.OnRightMenuSelect, id=id)
+            
+        self.menuItems = dict(self.menuItems)
+        self.PopupMenu (menu, event.GetPoint())
+        menu.Destroy
+
+    def OnRightMenuSelect(self, event):
+        """
+        Handle a right-click event.
+        """
+        if (self.menuItems[event.GetId()] == 'Delete'):
+            print ("Delete")
+            # Delete this item.  First, delete the data
+            del self.MediaList.ItemDataCollection[self.MediaList.GetItemData(self.ItemIndexRightClicked)]
+            self.MediaList.DeleteItem(self.ItemIndexRightClicked)
 		
 if __name__ == "__main__":
     # Create a wx.App(), which handles the windowing system event loop
