@@ -3,6 +3,8 @@
 import wx
 import pickle
 import datetime
+import os
+import os.path
 
 try:
     import vlc
@@ -100,12 +102,8 @@ class FileDragList(wx.ListCtrl):
                 if self.AfterChange:
                     self.AfterChange()
 
-    def _insert(self, x, y, text):
+    def _insert(self, x, y, items):
         """ Insert text at given x, y coordinates --- used with drag-and-drop. """
-        # Clean text.
-        # import string
-        # text = ''.join([x for x in text if x in (string.ascii_letters + string.digits + string.punctuation + ' ')])
-
         # Find insertion point.
         index, flags = self.HitTest((x, y))
 
@@ -122,31 +120,40 @@ class FileDragList(wx.ListCtrl):
             if y > rect.y + rect.height/2:
                 index += 1
                 
-        if (isinstance( text, list)):
-            # This is a List Item
-            for r in text:
-                textList = r["text"]
+        self.InsertItems (index, items)
+        
+        if self.AfterChange:
+            self.AfterChange()
+
+    def InsertItems (self, index = None, items = []):
+        if not index:
+            index = self.GetItemCount()
+            
+        for this_item in items:
+            if (isinstance( this_item, str)):
+                # Filename as a string
+                media = vlc.Media(this_item)
+                media.parse()
+                if media.get_duration():
+                    # Only add if length is > 0
+                    self.InsertItem(index, media.get_meta(vlc.Meta.Title))
+                    self.SetItem(index=index, column = 1, label = ms_to_hms(media.get_duration()))
+                    self.SetItemData(index, self.ItemId)
+                    self.ItemDataCollection[self.ItemId] = {
+                            "duration":datetime.timedelta(milliseconds = media.get_duration()), 
+                            "media":media, 
+                            "filename":this_item}
+                    self.ItemId += 1
+                    index += 1
+                    
+            elif (isinstance( this_item, dict)):
+                # Dropped ListItem
+                textList = this_item["text"]
                 self.InsertItem(index, textList[0])
                 for i in range(1, len(textList)): # Possible extra columns
                     self.SetItem(index = index, column = i, label = textList[i]) 
-                self.SetItemData(index, r["data"])
-        else:
-            media = vlc.Media(text)
-            media.parse()
-            self.InsertItem(index, media.get_meta(vlc.Meta.Title))
-            self.SetItem(index=index, column = 1, label = ms_to_hms(media.get_duration()))
-            self.SetItemData(index, self.ItemId)
-            self.ItemDataCollection[self.ItemId] = {
-                    "duration":datetime.timedelta(milliseconds = media.get_duration()), 
-                    "media":media, 
-                    "filename":text}
-            self.ItemId += 1
-            #self.SetItemData(index, text) # Store the filename
-            #print(media.tracks_get().type) # Doesn't work.  Grrrr.
-            #print( media.get_type())
-        if self.AfterChange:
-            self.AfterChange()
-            
+                self.SetItemData(index, this_item["data"])
+                
     def GetItemCollectionData (self, index, key):
         return self.ItemDataCollection[self.GetItemData(index)][key]
         
@@ -182,16 +189,23 @@ class ListDrop(wx.FileDropTarget):
             dataobj = dataobjComp.GetObject(format)
 
             if (format.GetType() == 13): # TextDataObject
-                self.setFn(x, y, dataobj.GetText())
+                self.setFn(x, y, dataobj.GetText().split())
 
             elif (format.GetType() == 15): # FileDataObject
-                for filename in dataobj.GetFilenames():
-                    self.setFn(x, y, filename)
+                file_list = []
+                
+                for this_filename in dataobj.GetFilenames():
+                    if os.path.isfile(this_filename):
+                        file_list.append(this_filename)
+                    elif os.path.isdir(this_filename):
+                        for dirpath, dirnames, filenames in os.walk(this_filename):
+                            file_list.extend([os.path.join(dirpath, f) for f in filenames])
+                        
+                self.setFn(x, y, file_list)
                     
             else: # CustomDataObject
                 self.setFn(x, y, pickle.loads(dataobj.GetData()))
-
-            
+     
         # what is returned signals the source what to do
         # with the original data (move, copy, etc.)  In this
         # case we just return the suggested value given to us.
