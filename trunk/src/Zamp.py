@@ -9,9 +9,13 @@ import os
 import os.path
 import queue
 import subprocess
-import vlc
 import datetime
 from FileDragList import FileDragList
+try:
+    import vlc
+    HAVE_VLC = True
+except:
+    HAVE_VLC = False
 
 # Make sure we are in the correct directory
 application_path = ''
@@ -58,6 +62,13 @@ class ZampMain (wx.Frame):
     def __init__ (self, title):
         wx.Frame.__init__(self, None, -1, title,
                           pos=wx.DefaultPosition, size=(400,300))
+        # See if VLC loaded
+        if not HAVE_VLC:
+            m = wx.MessageDialog(self, message = "Please download and install VLC Media Player\nfrom www.VideoLAN.org.", 
+                                caption = "Could not find VLC Media Player.",
+                                style = wx.ICON_ERROR|wx.OK)
+            m.ShowModal()
+        
         # Some variables
         self.delay_between_songs = datetime.timedelta(seconds=2)
         self.IsPlayingToEndTime = False
@@ -88,8 +99,9 @@ class ZampMain (wx.Frame):
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
 
         # VLC player controls
-        self.Instance = vlc.Instance()
-        self.player = self.Instance.media_player_new()  
+        if HAVE_VLC:
+            self.Instance = vlc.Instance()
+            self.player = self.Instance.media_player_new()  
 
         ctrlpanel = wx.Panel(self, -1 )
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -197,7 +209,7 @@ class ZampMain (wx.Frame):
         #  filename
         if title == -1:
             title = os.path.basename(MediaFileName)
-        self.StatusBar.SetStatusText("%s - wxVLCplayer" % title)
+        self.StatusBar.SetStatusText("%s" % title)
 
         # set the window id where to render VLC's video output
         #if platform.system() == 'Windows':
