@@ -116,12 +116,13 @@ class ZampMain (wx.Frame):
         # Time Slider
         self.timeslider = wx.Slider(ctrlpanel, -1, 0, 0, 1000)
         self.timeslider.SetRange(0, 1000)
+        self.Bind(wx.EVT_SLIDER, self.OnSetTime, self.timeslider)
         self.timeText = wx.StaticText(ctrlpanel, size=(70, -1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
         self.timeToEndText = wx.StaticText(ctrlpanel, size=(70, -1), style=wx.ST_NO_AUTORESIZE)
-        play   = wx.Button(ctrlpanel, label="Play")
+        play   = wx.Button(ctrlpanel, label="Play To End")
         stop   = wx.Button(ctrlpanel, label="Stop")
-        volume = wx.Button(ctrlpanel, label="Volume")
-        self.volslider = wx.Slider(ctrlpanel, -1, 0, 0, 100, size=(100, -1))
+        self.volslider = wx.Slider(ctrlpanel, -1, 100, 0, 200, size=(100, -1))
+        self.Bind(wx.EVT_SLIDER, self.OnSetVolume, self.volslider)
 
         # box1 contains the timeslider
         box1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -134,7 +135,7 @@ class ZampMain (wx.Frame):
         box2.Add(play, flag=wx.RIGHT, border=5)
         box2.Add(stop)
         box2.Add((-1, -1), 1)
-        box2.Add(volume)
+        box2.Add(wx.StaticText(ctrlpanel, label="Volume", style=wx.ALIGN_RIGHT))
         sizer.Add(box2, flag=wx.EXPAND)
         box2.Add(self.volslider, flag=wx.TOP | wx.LEFT, border=5)
         
@@ -223,7 +224,7 @@ class ZampMain (wx.Frame):
 
         # set the volume slider to the current volume
         #self.player.audio_set_volume(0)
-        self.volslider.SetValue(self.player.audio_get_volume() / 2)
+        self.volslider.SetValue(self.player.audio_get_volume())
     
     def OnOpen(self, evt):
         """Pop up a new dialow window to choose a file, then play the selected file.
@@ -252,7 +253,7 @@ class ZampMain (wx.Frame):
         self.StartNextSong()
         self.IsPlayingToEndTime = True
         self.timer.Start(milliseconds=100)
-        self.player.audio_set_volume(100)
+        self.OnSetVolume()
 
     def StartNextSong( self):
         # Clear item colors
@@ -284,13 +285,13 @@ class ZampMain (wx.Frame):
             self.player.stop()
             self.player.set_media(this_media)
             if self.player.play() == -1:
-                self.errorDialog("Unable to play.")
+                print("Unable to play.")
                 return
 
             # And set time
             if self.player.set_time(int(start_at.total_seconds() * 1000)) == -1:
             #if self.player.set_time(int(1)) == -1:
-                self.errorDialog("Failed to set time")
+                print("Failed to set time")
                 return
                 
             title = self.player.get_title()
@@ -304,7 +305,7 @@ class ZampMain (wx.Frame):
             self.StatusBar.SetStatusText("Waiting...")     
             return (next_start_at - datetime.datetime.now())
 
-    def OnStop(self, evt):
+    def OnStop(self, evt=None):
         """Stop the player.
         """
         self.IsPlayingToEndTime = False
@@ -319,6 +320,7 @@ class ZampMain (wx.Frame):
         """Update the time slider according to the current movie time.
         """
         # See if we need to start the next song
+        time_until_start = None
         if self.IsPlayingToEndTime and not self.player.is_playing():
             time_until_start = self.StartNextSong()
         
@@ -340,39 +342,29 @@ class ZampMain (wx.Frame):
             self.timeToEndText.SetLabel(ms_to_hms(time_until_start.total_seconds() * 1000))
             
         else:
+            # We are done playing
             self.timeslider.SetValue(0)
             self.timeText.SetLabel("")
             self.timeToEndText.SetLabel("")
+            self.OnStop()
 
     def OnSetTime(self, evt):
         """Set the volume according to the volume sider.
         """
+        if self.IsPlayingToEndTime:
+            return
         slideTime = self.timeslider.GetValue()
         # vlc.MediaPlayer.audio_set_volume returns 0 if success, -1 otherwise
         if self.player.set_time(slideTime) == -1:
-            self.errorDialog("Failed to set time")
+            print("Failed to set time")
 
-
-    def OnToggleVolume(self, evt):
-        """Mute/Unmute according to the audio button.
-        """
-        is_mute = self.player.audio_get_mute()
-
-        self.player.audio_set_mute(not is_mute)
-        # update the volume slider;
-        # since vlc volume range is in [0, 200],
-        # and our volume slider has range [0, 100], just divide by 2.
-        self.volslider.SetValue(self.player.audio_get_volume() / 2)
-
-    def OnSetVolume(self, evt):
+    def OnSetVolume(self, evt=None):
         """Set the volume according to the volume sider.
         """
-        volume = self.volslider.GetValue() * 2
         # vlc.MediaPlayer.audio_set_volume returns 0 if success, -1 otherwise
-        if self.player.audio_set_volume(volume) == -1:
-            self.errorDialog("Failed to set volume")
+        if self.player.audio_set_volume(self.volslider.GetValue()) == -1:
+            print("Failed to set volume")
 
-        
     def OnExit(self, evt):
         """Closes the window.
         """
@@ -382,7 +374,7 @@ class ZampMain (wx.Frame):
         self.ItemIndexRightClicked = event.GetIndex()
         
         self.menuItems = []     
-        #self.menuItems.append((wx.NewId(),'Play This'))
+        self.menuItems.append((wx.NewId(),'Play This'))
         #self.menuItems.append((wx.NewId(),'Play From Here'))
         self.menuItems.append((wx.NewId(),'Delete'))
             
@@ -399,8 +391,19 @@ class ZampMain (wx.Frame):
         """
         Handle a right-click event.
         """
+        if (self.menuItems[event.GetId()] == 'Play This'):
+            self.OnStop()
+            self.player.set_media(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "media"))
+            if self.player.play() == -1:
+                print("Unable to play.")
+                return
+            title = self.player.get_title()
+            if title == -1:
+                title = os.path.basename(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "filename"))
+            self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "media").get_meta(vlc.Meta.Title))
+            self.timer.Start(milliseconds=100)              
+                
         if (self.menuItems[event.GetId()] == 'Delete'):
-            print ("Delete")
             # Delete this item.  First, delete the data
             del self.MediaList.ItemDataCollection[self.MediaList.GetItemData(self.ItemIndexRightClicked)]
             self.MediaList.DeleteItem(self.ItemIndexRightClicked)
