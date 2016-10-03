@@ -77,17 +77,20 @@ class ZampMain (wx.Frame):
         #   File Menu
         self.frame_menubar = wx.MenuBar()
         self.file_menu = wx.Menu()
-        self.file_menu.Append(1, "&Open", "Open from file..")
+        self.file_menu.Append(1, "&Load File", "Load file to playlist..")
+        self.file_menu.Append(2, "Load &Folder", "Load folder to playlist..")
+        self.file_menu.Append(3, "Load &Playlist", "Load playlist from file")
         self.file_menu.AppendSeparator()
-        self.file_menu.Append(2, "&View Logs", "View Log File Directory")
+        self.file_menu.Append(4, "&Save Playlist", "Save playlist to file")
         self.file_menu.AppendSeparator()
-        self.file_menu.Append(3, "&Update Passwords", "Update user names and passwords")
+        self.file_menu.Append(5, "&Clear Playlist", "Remove all files from playlist")
         self.file_menu.AppendSeparator()
-        self.file_menu.Append(4, "&Close", "Quit")
-        #self.Bind(wx.EVT_MENU, self.OnOpen, id=1)
+        self.file_menu.Append(6, "&Close", "Quit")
+        self.Bind(wx.EVT_MENU, self.OnLoadFile, id=1)
+        self.Bind(wx.EVT_MENU, self.OnLoadFolder, id=2)
         #self.Bind(wx.EVT_MENU, self.OnViewLogDir, id=2)
         #self.Bind(wx.EVT_MENU, self.OnUpdatePasswords, id=3)
-        self.Bind(wx.EVT_MENU, self.OnExit, id=4)
+        self.Bind(wx.EVT_MENU, self.OnExit, id=6)
         self.frame_menubar.Append(self.file_menu, "File")
         self.SetMenuBar(self.frame_menubar)
         
@@ -196,51 +199,34 @@ class ZampMain (wx.Frame):
             
         return end_time
         
-    def OpenFile (self, MediaFileName, Play = True):
-        # if a file is already running, then stop it.
-        self.OnStop(None)
-
-        self.MediaFileName=MediaFileName
-        self.Media = self.Instance.media_new(str(self.MediaFileName))
-        self.player.set_media(self.Media)
-        # Report the title of the file chosen
-        title = self.player.get_title()
-        #  if an error was encountred while retriving the title, then use
-        #  filename
-        if title == -1:
-            title = os.path.basename(MediaFileName)
-        self.StatusBar.SetStatusText("%s" % title)
-
-        # set the window id where to render VLC's video output
-        #if platform.system() == 'Windows':
-        #    self.player.set_hwnd(self.videopanel.GetHandle())
-        #elif platform.system() == 'Darwin':
-        #    self.player.set_nsobject(self.videopanel.GetHandle())
-        #else:
-        #    self.player.set_xwindow(self.videopanel.GetHandle())
-
-        if Play:
-            self.OnPlay(None)
-
-        # set the volume slider to the current volume
-        #self.player.audio_set_volume(0)
-        self.volslider.SetValue(self.player.audio_get_volume())
-    
-    def OnOpen(self, evt):
+    def OnLoadFile(self, evt):
         """Pop up a new dialow window to choose a file, then play the selected file.
         """
-        # if a file is already running, then stop it.
-        self.OnStop(None)
-
         # Create a file dialog opened in the current home directory, where
         # you can display all kind of files, having as title "Choose a file".
-        dlg = wx.FileDialog(self, "Choose a file", os.path.expanduser('~'), "",
-                            "*.*", wx.FD_OPEN)
+        dlg = wx.FileDialog(self, "Choose files to add", 
+                            wildcard="*.*",  
+                            style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST|wx.FD_MULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
-            dirname = dlg.GetDirectory()
-            filename = dlg.GetFilename()
-            # Creation
-            self.OpenFile(os.path.join(dirname, filename))
+            # Add to list
+            self.MediaList.InsertItems(items=dlg.GetPaths())
+
+        # finally destroy the dialog
+        dlg.Destroy()
+        
+    def OnLoadFolder(self, evt):
+        """Pop up a new dialow window to choose a file, then play the selected file.
+        """
+        # Create a file dialog opened in the current home directory, where
+        # you can display all kind of files, having as title "Choose a file".
+        dlg = wx.DirDialog(self, "Choose folder to add",  
+                            style=wx.DD_DIR_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            # Add to list
+            file_list = []
+            for dirpath, dirnames, filenames in os.walk(dlg.GetPath()):
+                file_list.extend([os.path.join(dirpath, f) for f in filenames])
+            self.MediaList.InsertItems(items=file_list)
 
         # finally destroy the dialog
         dlg.Destroy()
