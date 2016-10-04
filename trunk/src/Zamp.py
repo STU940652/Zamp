@@ -244,7 +244,8 @@ class ZampMain (wx.Frame):
     def StartNextSong( self):
         # Clear item colors
         for i in range( self.MediaList.GetItemCount()):
-            self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("BLACK"))
+            if self.MediaList.GetItemTextColour(i) != wx.TheColourDatabase.Find("BLACK"):
+                self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("BLACK"))
     
         # First find the file to play
         this_media = None
