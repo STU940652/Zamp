@@ -88,8 +88,9 @@ class ZampMain (wx.Frame):
         self.file_menu.Append(6, "&Close", "Quit")
         self.Bind(wx.EVT_MENU, self.OnLoadFile, id=1)
         self.Bind(wx.EVT_MENU, self.OnLoadFolder, id=2)
-        #self.Bind(wx.EVT_MENU, self.OnViewLogDir, id=2)
-        #self.Bind(wx.EVT_MENU, self.OnUpdatePasswords, id=3)
+        self.Bind(wx.EVT_MENU, self.OnLoadPlaylist, id=3)
+        self.Bind(wx.EVT_MENU, self.OnSavePlaylist, id=4)
+        self.Bind(wx.EVT_MENU, self.OnClearPlaylist, id=5)
         self.Bind(wx.EVT_MENU, self.OnExit, id=6)
         self.frame_menubar.Append(self.file_menu, "File")
         self.SetMenuBar(self.frame_menubar)
@@ -352,6 +353,16 @@ class ZampMain (wx.Frame):
         if self.player.audio_set_volume(self.volslider.GetValue()) == -1:
             print("Failed to set volume")
 
+    def OnLoadPlaylist( self, evt):
+        pass
+        
+    def OnSavePlaylist( self, evt):
+        pass
+        
+    def OnClearPlaylist( self, evt):
+        self.MediaList.DeleteAllItems()
+        self.MediaList.ItemDataCollection = {}
+    
     def OnExit(self, evt):
         """Closes the window.
         """
