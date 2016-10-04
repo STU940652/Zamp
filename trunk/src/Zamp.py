@@ -10,6 +10,7 @@ import os.path
 import queue
 import subprocess
 import datetime
+import json
 from FileDragList import FileDragList
 try:
     import vlc
@@ -354,10 +355,34 @@ class ZampMain (wx.Frame):
             print("Failed to set volume")
 
     def OnLoadPlaylist( self, evt):
-        pass
+        dlg = wx.FileDialog(self, "Load Playlist", 
+                            wildcard="ZAMP Playlist (*.zamp)|*.zamp",  
+                            style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            # Add to list
+            with open( dlg.GetPath(), "rt") as f:
+                d = json.load(f)
+                self.MediaList.InsertItems(items=d["media_paths"])
+
+        # finally destroy the dialog
+        dlg.Destroy()
         
     def OnSavePlaylist( self, evt):
-        pass
+        # Create a file dialog opened in the current home directory, where
+        # you can display all kind of files, having as title "Choose a file".
+        dlg = wx.FileDialog(self, "Save Playlist", 
+                            wildcard="ZAMP Playlist (*.zamp)|*.zamp",  
+                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
+        if dlg.ShowModal() == wx.ID_OK:
+            # Roll up the media file paths
+            l = []
+            for i in range( self.MediaList.GetItemCount()):
+                l.append(self.MediaList.GetItemCollectionData( i, "filename"))
+                with open( dlg.GetPath(), "wt") as f:
+                    json.dump({"media_paths" : l}, f)            
+
+        # finally destroy the dialog
+        dlg.Destroy()
         
     def OnClearPlaylist( self, evt):
         self.MediaList.DeleteAllItems()
