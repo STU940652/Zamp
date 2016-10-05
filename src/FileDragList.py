@@ -5,6 +5,7 @@ import pickle
 import datetime
 import os
 import os.path
+import random
 
 try:
     import vlc
@@ -159,6 +160,15 @@ class FileDragList(wx.ListCtrl):
         
     def SetItemCollectionData (self, index, key, value):
         self.ItemDataCollection[self.GetItemData(index)][key] = value
+
+    def ShuffleSortCB (self, item1, item2):
+        return 100 * (self.sort_order[item1] - self.sort_order[item2])
+
+    def ShuffleItems( self):
+        self.sort_order = {}
+        for i in range( self.GetItemCount()):
+            self.sort_order[self.GetItemData(i)] = random.random()
+        self.SortItems( self.ShuffleSortCB)
         
 class ListDrop(wx.FileDropTarget):
     """ Drop target for simple lists. """
