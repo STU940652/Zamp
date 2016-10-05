@@ -11,6 +11,7 @@ import queue
 import subprocess
 import datetime
 import json
+import random
 from FileDragList import FileDragList
 try:
     import vlc
@@ -126,6 +127,7 @@ class ZampMain (wx.Frame):
         self.timeToEndText = wx.StaticText(ctrlpanel, size=(70, -1), style=wx.ST_NO_AUTORESIZE)
         play   = wx.Button(ctrlpanel, label="Play To End")
         stop   = wx.Button(ctrlpanel, label="Stop")
+        shuffle = wx.Button(ctrlpanel, label="Shuffle")
         self.volslider = wx.Slider(ctrlpanel, -1, 100, 0, 200, size=(100, -1))
         self.Bind(wx.EVT_SLIDER, self.OnSetVolume, self.volslider)
 
@@ -139,6 +141,7 @@ class ZampMain (wx.Frame):
         box2 = wx.BoxSizer(wx.HORIZONTAL)
         box2.Add(play, flag=wx.RIGHT, border=5)
         box2.Add(stop)
+        box2.Add(shuffle)
         box2.Add((-1, -1), 1)
         box2.Add(wx.StaticText(ctrlpanel, label="Volume", style=wx.ALIGN_RIGHT))
         sizer.Add(box2, flag=wx.EXPAND)
@@ -146,6 +149,7 @@ class ZampMain (wx.Frame):
         
         self.Bind(wx.EVT_BUTTON, self.OnPlay, play)
         self.Bind(wx.EVT_BUTTON, self.OnStop, stop)
+        self.Bind(wx.EVT_BUTTON, self.OnShuffle, shuffle)
         
         # box3 is for the end time
         box3 = wx.BoxSizer( wx.HORIZONTAL)
@@ -304,7 +308,18 @@ class ZampMain (wx.Frame):
         self.timeslider.SetValue(0)
         self.timeText.SetLabel("")
         self.timeToEndText.SetLabel("")
-            
+        
+    def SortCB (self, item1, item2):
+        print (item1, item2, self.sort_order[item1], self.sort_order[item2])
+        return self.sort_order[item1] - self.sort_order[item2]
+
+    def OnShuffle( self, evt):
+        self.sort_order = {}
+        for i in range( self.MediaList.GetItemCount()):
+            self.sort_order[self.MediaList.GetItemData(i)] = random.random()
+        print (self.sort_order)
+        self.MediaList.SortItems( self.SortCB)
+        
     def OnTimer(self, evt):
         """Update the time slider according to the current movie time.
         """
