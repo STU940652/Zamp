@@ -11,7 +11,6 @@ import queue
 import subprocess
 import datetime
 import json
-import random
 from FileDragList import FileDragList
 try:
     import vlc
@@ -308,17 +307,9 @@ class ZampMain (wx.Frame):
         self.timeslider.SetValue(0)
         self.timeText.SetLabel("")
         self.timeToEndText.SetLabel("")
-        
-    def SortCB (self, item1, item2):
-        print (item1, item2, self.sort_order[item1], self.sort_order[item2])
-        return self.sort_order[item1] - self.sort_order[item2]
 
     def OnShuffle( self, evt):
-        self.sort_order = {}
-        for i in range( self.MediaList.GetItemCount()):
-            self.sort_order[self.MediaList.GetItemData(i)] = random.random()
-        print (self.sort_order)
-        self.MediaList.SortItems( self.SortCB)
+        self.MediaList.ShuffleItems()
         
     def OnTimer(self, evt):
         """Update the time slider according to the current movie time.
