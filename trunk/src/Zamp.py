@@ -73,6 +73,7 @@ class ZampMain (wx.Frame):
         # Some variables
         self.delay_between_songs = datetime.timedelta(seconds=2)
         self.IsPlayingToEndTime = False
+        self.DisableDuringPlayList = []
         
         # Menu Bar
         #   File Menu
@@ -95,6 +96,7 @@ class ZampMain (wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExit, id=6)
         self.frame_menubar.Append(self.file_menu, "File")
         self.SetMenuBar(self.frame_menubar)
+
         
         # Status Bar
         self.StatusBar = self.CreateStatusBar(2)
@@ -117,10 +119,11 @@ class ZampMain (wx.Frame):
         self.MediaList.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
         sizer.Add(self.MediaList, 1, flag=wx.EXPAND)
         self.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnRightClick, self.MediaList)
-
+        
         # Time Slider
         self.timeslider = wx.Slider(ctrlpanel, -1, 0, 0, 1000)
         self.timeslider.SetRange(0, 1000)
+        self.DisableDuringPlayList.append(self.timeslider)
         self.Bind(wx.EVT_SLIDER, self.OnSetTime, self.timeslider)
         self.timeText = wx.StaticText(ctrlpanel, size=(70, -1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
         self.timeToEndText = wx.StaticText(ctrlpanel, size=(70, -1), style=wx.ST_NO_AUTORESIZE)
@@ -149,6 +152,8 @@ class ZampMain (wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnPlay, play)
         self.Bind(wx.EVT_BUTTON, self.OnStop, stop)
         self.Bind(wx.EVT_BUTTON, self.OnShuffle, shuffle)
+        self.DisableDuringPlayList.append(play)
+        self.DisableDuringPlayList.append(shuffle)
         
         # box3 is for the end time
         box3 = wx.BoxSizer( wx.HORIZONTAL)
@@ -157,6 +162,7 @@ class ZampMain (wx.Frame):
         self.Bind(wx.EVT_TEXT_ENTER, self.OnEndTimeChange, self.EndTime)
         box3.Add( self.EndTime)
         sizer.Add( box3, flag=wx.EXPAND)
+        self.DisableDuringPlayList.append(self.EndTime)
         
         # Pre-populate End Time
         about_a_half_hour_from_now = datetime.datetime.now().replace(second = 5) + \
@@ -245,6 +251,12 @@ class ZampMain (wx.Frame):
         self.IsPlayingToEndTime = True
         self.timer.Start(milliseconds=100)
         self.OnSetVolume()
+        
+        #Disable stuff to make playing safe
+        for w in self.DisableDuringPlayList:
+            w.Disable()
+        self.MediaList.DisableDragDrop()
+        self.frame_menubar.EnableTop(0, False)
 
     def StartNextSong( self):
         # Clear item colors
@@ -307,7 +319,18 @@ class ZampMain (wx.Frame):
         self.timeslider.SetValue(0)
         self.timeText.SetLabel("")
         self.timeToEndText.SetLabel("")
+        
+        # Re-enable stuff
+        for w in self.DisableDuringPlayList:
+            w.Enable()
+        self.MediaList.EnableDragDrop()
+        self.frame_menubar.EnableTop(0, True)
 
+        # Clear item colors
+        for i in range( self.MediaList.GetItemCount()):
+            if self.MediaList.GetItemTextColour(i) != wx.TheColourDatabase.Find("BLACK"):
+                self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("BLACK"))
+            
     def OnShuffle( self, evt):
         self.MediaList.ShuffleItems()
         self.UpdateTimes()

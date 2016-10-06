@@ -47,13 +47,20 @@ class FileDragList(wx.ListCtrl):
 
         wx.ListCtrl.__init__(self, *arg, **kw)
 
-        self.Bind(wx.EVT_LIST_BEGIN_DRAG, self._startDrag)
-
-        dt = ListDrop(self._insert)
-        self.SetDropTarget(dt)
+        self.EnableDragDrop()
+        
         self.ItemId = 0
         self.ItemDataCollection = {}
         self.AfterChangeCB = AfterChangeCB
+        
+    def EnableDragDrop(self):
+        self.Bind(wx.EVT_LIST_BEGIN_DRAG, self._startDrag)
+        dt = ListDrop(self._insert)
+        self.SetDropTarget(dt)
+
+    def DisableDragDrop(self):
+        self.Unbind(wx.EVT_LIST_BEGIN_DRAG)
+        self.SetDropTarget(None)        
         
     def getItemInfo(self, idx):
         """Collect all relevant data of a listitem, and put it in a dictionary"""
