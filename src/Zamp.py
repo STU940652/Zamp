@@ -111,7 +111,7 @@ class ZampMain (wx.Frame):
         ctrlpanel = wx.Panel(self, -1 )
         sizer = wx.BoxSizer(wx.VERTICAL)
         
-        self.MediaList = FileDragList(AfterChange=self.UpdateTimes, parent=ctrlpanel, style=wx.LC_REPORT)
+        self.MediaList = FileDragList(AfterChangeCB=self.UpdateTimes, parent=ctrlpanel, style=wx.LC_REPORT)
         self.MediaList.InsertColumn(0, "Name", width=200)
         self.MediaList.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
         self.MediaList.InsertColumn(2, "Start Time", wx.LIST_FORMAT_RIGHT)
@@ -310,6 +310,7 @@ class ZampMain (wx.Frame):
 
     def OnShuffle( self, evt):
         self.MediaList.ShuffleItems()
+        self.UpdateTimes()
         
     def OnTimer(self, evt):
         """Update the time slider according to the current movie time.
@@ -393,6 +394,7 @@ class ZampMain (wx.Frame):
     def OnClearPlaylist( self, evt):
         self.MediaList.DeleteAllItems()
         self.MediaList.ItemDataCollection = {}
+        self.UpdateTimes()
     
     def OnExit(self, evt):
         """Closes the window.
@@ -436,6 +438,7 @@ class ZampMain (wx.Frame):
             # Delete this item.  First, delete the data
             del self.MediaList.ItemDataCollection[self.MediaList.GetItemData(self.ItemIndexRightClicked)]
             self.MediaList.DeleteItem(self.ItemIndexRightClicked)
+            self.UpdateTimes()
 		
 if __name__ == "__main__":
     # Create a wx.App(), which handles the windowing system event loop

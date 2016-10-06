@@ -39,7 +39,7 @@ def hms_to_ms (s):
         return 0
 
 class FileDragList(wx.ListCtrl):
-    def __init__(self, AfterChange=None, *arg, **kw):
+    def __init__(self, AfterChangeCB=None, *arg, **kw):
         if 'style' in kw and (kw['style']&wx.LC_LIST or kw['style']&wx.LC_REPORT):
             kw['style'] |= wx.LC_SINGLE_SEL
         else:
@@ -53,7 +53,7 @@ class FileDragList(wx.ListCtrl):
         self.SetDropTarget(dt)
         self.ItemId = 0
         self.ItemDataCollection = {}
-        self.AfterChange = AfterChange
+        self.AfterChangeCB = AfterChangeCB
         
     def getItemInfo(self, idx):
         """Collect all relevant data of a listitem, and put it in a dictionary"""
@@ -100,8 +100,9 @@ class FileDragList(wx.ListCtrl):
                 if idx == -1:
                     break
                 self.DeleteItem(idx)
-                if self.AfterChange:
-                    self.AfterChange()
+                
+            if self.AfterChangeCB:
+                self.AfterChangeCB()
 
     def _insert(self, x, y, items):
         """ Insert text at given x, y coordinates --- used with drag-and-drop. """
@@ -122,9 +123,6 @@ class FileDragList(wx.ListCtrl):
                 index += 1
                 
         self.InsertItems (index, items)
-        
-        if self.AfterChange:
-            self.AfterChange()
 
     def InsertItems (self, index = None, items = []):
         if not index:
@@ -154,6 +152,9 @@ class FileDragList(wx.ListCtrl):
                 for i in range(1, len(textList)): # Possible extra columns
                     self.SetItem(index = index, column = i, label = textList[i]) 
                 self.SetItemData(index, this_item["data"])
+        
+        if self.AfterChangeCB:
+            self.AfterChangeCB()
                 
     def GetItemCollectionData (self, index, key):
         return self.ItemDataCollection[self.GetItemData(index)][key]
