@@ -140,8 +140,8 @@ class FileDragList(wx.ListCtrl):
                 # Filename as a string
                 media = vlc.Media(this_item)
                 media.parse()
-                if media.get_duration():
-                    # Only add if length is > 0
+                if (media.get_duration() > (10*1000)):
+                    # Only add if length is > 10s.  VLC assigns a length of 10 seconds to jpegs, etc.
                     self.InsertItem(index, media.get_meta(vlc.Meta.Title))
                     self.SetItem(index=index, column = 1, label = ms_to_hms(media.get_duration()))
                     self.SetItemData(index, self.ItemId)
