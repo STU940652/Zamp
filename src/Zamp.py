@@ -96,9 +96,16 @@ class ZampMain (wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnClearPlaylist, id=5)
         self.Bind(wx.EVT_MENU, self.OnExit, id=6)
         self.frame_menubar.Append(self.file_menu, "File")
+        
+        help_menu = wx.Menu()
+        help_menu.Append(91,  "Help", "Show intro to Zamp")
+        help_menu.Append(92, "About", "About Zamp")
+        self.frame_menubar.Append(help_menu, "Help")
+        self.Bind(wx.EVT_MENU, self.OnShowAbout, id=92)
+        
+        
         self.SetMenuBar(self.frame_menubar)
 
-        
         # Status Bar
         self.StatusBar = self.CreateStatusBar(2)
 
@@ -468,6 +475,14 @@ class ZampMain (wx.Frame):
             del self.MediaList.ItemDataCollection[self.MediaList.GetItemData(self.ItemIndexRightClicked)]
             self.MediaList.DeleteItem(self.ItemIndexRightClicked)
             self.UpdateTimes()
+            
+    def OnShowAbout(self, event):
+        m = wx.Dialog( self, title="About...")
+        s = wx.BoxSizer(wx.VERTICAL)
+        s.Add(m.CreateTextSizer("Zamp is really cool!"))
+        s.Add(m.CreateButtonSizer( wx.OK))
+        m.SetSizer(s)
+        m.Show()
 		
 if __name__ == "__main__":
     # Create a wx.App(), which handles the windowing system event loop
