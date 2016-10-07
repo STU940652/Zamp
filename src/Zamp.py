@@ -74,6 +74,7 @@ class ZampMain (wx.Frame):
         self.delay_between_songs = datetime.timedelta(seconds=2)
         self.IsPlayingToEndTime = False
         self.DisableDuringPlayList = []
+        self.TimerBlank = 0
         
         # Menu Bar
         #   File Menu
@@ -304,7 +305,7 @@ class ZampMain (wx.Frame):
             if title == -1:
                 title = os.path.basename(self.MediaList.GetItemCollectionData( i, "filename"))
             self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( i, "media").get_meta(vlc.Meta.Title))
-            
+            self.TimerBlank = 2
         else:
             self.StatusBar.SetStatusText("Waiting...")     
             return (next_start_at - datetime.datetime.now())
@@ -338,12 +339,22 @@ class ZampMain (wx.Frame):
     def OnTimer(self, evt):
         """Update the time slider according to the current movie time.
         """
+        # Check for blanking after starting to play
+        if self.TimerBlank:
+            self.TimerBlank -= 1
+            return
+        
         # See if we need to start the next song
         time_until_start = None
         if self.IsPlayingToEndTime and not self.player.is_playing():
             time_until_start = self.StartNextSong()
-        
-        if self.player.is_playing():
+            
+            if time_until_start:
+                self.timeslider.SetValue(0)
+                self.timeText.SetLabel("")
+                self.timeToEndText.SetLabel(ms_to_hms(time_until_start.total_seconds() * 1000))
+            
+        elif self.player.is_playing():
             # since the self.player.get_length can change while playing,
             # re-set the timeslider to the correct range.
             length = self.player.get_length()
@@ -355,11 +366,6 @@ class ZampMain (wx.Frame):
             self.timeText.SetLabel(ms_to_hms(CurrentTime))     
             self.timeToEndText.SetLabel(ms_to_hms(length - CurrentTime))
         
-        elif time_until_start:
-            self.timeslider.SetValue(0)
-            self.timeText.SetLabel("")
-            self.timeToEndText.SetLabel(ms_to_hms(time_until_start.total_seconds() * 1000))
-            
         else:
             # We are done playing
             self.timeslider.SetValue(0)
