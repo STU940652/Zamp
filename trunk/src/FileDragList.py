@@ -132,7 +132,7 @@ class FileDragList(wx.ListCtrl):
         self.InsertItems (index, items)
 
     def InsertItems (self, index = None, items = []):
-        if not index:
+        if index == None:
             index = self.GetItemCount()
             
         for this_item in items:
