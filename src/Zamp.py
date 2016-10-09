@@ -313,9 +313,14 @@ class ZampMain (wx.Frame):
                 title = os.path.basename(self.MediaList.GetItemCollectionData( i, "filename"))
             self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( i, "media").get_meta(vlc.Meta.Title))
             self.TimerBlank = 2
-        else:
+            
+        elif next_start_at:
             self.StatusBar.SetStatusText("Waiting...")     
             return (next_start_at - datetime.datetime.now())
+            
+        else:
+            # Done playing
+            self.OnStop()
 
     def OnStop(self, evt=None):
         """Stop the player.
