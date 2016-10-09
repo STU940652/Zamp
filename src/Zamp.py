@@ -101,8 +101,8 @@ class ZampMain (wx.Frame):
         help_menu.Append(91,  "Help", "Show intro to Zamp")
         help_menu.Append(92, "About", "About Zamp")
         self.frame_menubar.Append(help_menu, "Help")
-        self.Bind(wx.EVT_MENU, self.OnShowAbout, id=92)
-        
+        self.Bind(wx.EVT_MENU, self.OnShowHelp, id=91)
+        self.Bind(wx.EVT_MENU, self.OnShowAbout, id=92)        
         
         self.SetMenuBar(self.frame_menubar)
 
@@ -484,8 +484,54 @@ class ZampMain (wx.Frame):
     def OnShowAbout(self, event):
         m = wx.Dialog( self, title="About...")
         s = wx.BoxSizer(wx.VERTICAL)
-        s.Add(m.CreateTextSizer("Zamp is really cool!"))
-        s.Add(m.CreateButtonSizer( wx.OK))
+        s.Add(m.CreateTextSizer("""ZAMP
+Zamp is Another Media Player
+
+Visit us at zamp.sourceforge.net
+
+This program is released under the GNU Public License v2.0.  
+It is released without without any warranty, expressed or 
+implied, including any warranty as to merchantability.  
+"""), flag=wx.ALIGN_CENTER|wx.ALL, border=10)
+        s.Add(m.CreateButtonSizer( wx.OK), flag=wx.ALIGN_CENTER)
+        m.SetSizer(s)
+        m.Fit()
+        m.Show()
+
+    def OnShowHelp(self, event):
+        m = wx.Dialog( self, title="Help", style=wx.RESIZE_BORDER|wx.DEFAULT_DIALOG_STYLE)
+        s = wx.BoxSizer(wx.VERTICAL)
+        s.Add(wx.TextCtrl(m, value = """ZAMP
+Zamp is Another Media Player
+
+Visit us at zamp.sourceforge.net
+
+The point of this program is to play a list of music, and have the last song end at a specific time.  The "music" can be any file that can be played by VLC, including video.
+
+PREREQUISITES
+Zamp uses VLC media player.  It must also be installed prior to use.  You can get it at www.VideoLAN.org.
+
+STUFF YOU SHOULD KNOW
+At the moment, you can't add any files with a length of less than 10 seconds.  VLC will happily let you add still images (e.g. JPEGs) to a playlist, which it will show for 10 seconds as a slide show.  So for right now Zamp ignores any files with a time less than 10 seconds.
+
+SELECTING MEDIA
+You can drag and drop media files and folders to the playlist window.  You can also add files and folders from the File menu.
+
+Playlists can be loaded and saved from the File menu.  When you load a playlist, the existing media is not cleared first.
+
+You can change the playlist order by dragging and dropping.
+
+REMOVING MEDIA
+Right-click and select "Delete" to remove a media.
+
+Select "Clear Playlist" from the File menu to remove all media.
+
+PLAYING
+When you click "Play To End", the media will begin playing at whatever song and time that will result in the last song ending at the "Time To End".  Note that there is a 2 second delay between songs.  When playing to end, all of the controls (e.g. adding files, scrubbing) are disabled.
+
+You can also right-click on a song and select "Play This".  You can then use the scrubber to change the time to preview the song.  Play will stop at the end of the song.
+""", style=wx.TE_MULTILINE|wx.TE_AUTO_URL|wx.TE_RICH), flag=wx.ALIGN_CENTER|wx.EXPAND, proportion=1)
+        s.Add(m.CreateButtonSizer( wx.OK), flag=wx.ALIGN_CENTER)
         m.SetSizer(s)
         m.Show()
 		
