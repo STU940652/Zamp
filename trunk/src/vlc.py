@@ -148,8 +148,14 @@ def find_lib():
             if plugin_path is not None:  # try loading
                 p = os.getcwd()
                 os.chdir(plugin_path)
+                if (getattr(sys, 'frozen', False)):
+                    # Fixup for PyInstaller
+                    ctypes.windll.kernel32.SetDllDirectoryW(plugin_path)
                  # if chdir failed, this will raise an exception
                 dll = ctypes.CDLL(libname)
+                if (getattr(sys, 'frozen', False)):
+                    # Fixup for PyInstaller
+                    ctypes.windll.kernel32.SetDllDirectoryW(sys._MEIPASS)
                  # restore cwd after dll has been loaded
                 os.chdir(p)
             else:  # may fail

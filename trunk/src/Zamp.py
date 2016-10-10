@@ -484,7 +484,7 @@ class ZampMain (wx.Frame):
     def OnShowAbout(self, event):
         m = wx.Dialog( self, title="About...")
         s = wx.BoxSizer(wx.VERTICAL)
-        s.Add(m.CreateTextSizer("""ZAMP
+        s.Add(m.CreateTextSizer("""ZAMP %s
 Zamp is Another Media Player
 
 Visit us at zamp.sourceforge.net
@@ -492,7 +492,7 @@ Visit us at zamp.sourceforge.net
 This program is released under the GNU Public License v2.0.  
 It is released without without any warranty, expressed or 
 implied, including any warranty as to merchantability.  
-"""), flag=wx.ALIGN_CENTER|wx.ALL, border=10)
+""" % VERSION), flag=wx.ALIGN_CENTER|wx.ALL, border=10)
         s.Add(m.CreateButtonSizer( wx.OK), flag=wx.ALIGN_CENTER)
         m.SetSizer(s)
         m.Fit()
@@ -525,6 +525,9 @@ REMOVING MEDIA
 Right-click and select "Delete" to remove a media.
 
 Select "Clear Playlist" from the File menu to remove all media.
+
+SET THE END TIME
+Time is in the format HH:MM:SS pm.  You have to hit Enter for it to take effect.  At program start, the end time defaults to about a half hour in the future, at a 30 minute interval plus 5 seconds (because most songs have a few seconds of fade out).
 
 PLAYING
 When you click "Play To End", the media will begin playing at whatever song and time that will result in the last song ending at the "Time To End".  Note that there is a 2 second delay between songs.  When playing to end, all of the controls (e.g. adding files, scrubbing) are disabled.
