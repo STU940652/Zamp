@@ -11,6 +11,7 @@ import queue
 import subprocess
 import datetime
 import json
+import license
 from FileDragList import FileDragList
 try:
     import vlc
@@ -493,6 +494,9 @@ This program is released under the GNU Public License v2.0.
 It is released without without any warranty, expressed or 
 implied, including any warranty as to merchantability.  
 """ % VERSION), flag=wx.ALIGN_CENTER|wx.ALL, border=10)
+        s.Add(wx.TextCtrl(m, value=license.GPL, style=wx.TE_MULTILINE, size=(450,100)), flag=wx.LEFT|wx.RIGHT|wx.EXPAND, border=10)
+        s.Add(wx.StaticText(m, label="VLClib is released under LGPL"), flag=wx.LEFT|wx.TOP, border=10)
+        s.Add(wx.TextCtrl(m, value=license.LGPL, style=wx.TE_MULTILINE, size=(450,100)), flag=wx.LEFT|wx.RIGHT|wx.EXPAND, border=10)
         s.Add(m.CreateButtonSizer( wx.OK), flag=wx.ALIGN_CENTER)
         m.SetSizer(s)
         m.Fit()
@@ -542,7 +546,7 @@ if __name__ == "__main__":
     # Create a wx.App(), which handles the windowing system event loop
     app = wx.App(redirect=False)
     # Create the window containing our small media player
-    player = ZampMain("Zamp" + VERSION)
+    player = ZampMain("Zamp")
     # show the player window centred and run the application
     player.Show()
     app.MainLoop()
