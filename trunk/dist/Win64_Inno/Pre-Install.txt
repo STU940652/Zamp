@@ -1,0 +1,1 @@
+Zamp uses VLC media player.  It must also be installed prior to use.  You can get it at www.VideoLAN.org.
