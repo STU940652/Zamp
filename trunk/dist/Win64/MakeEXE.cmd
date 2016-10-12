@@ -4,11 +4,9 @@ pyinstaller Zamp.spec --distpath=../dist/Win64 --clean -y
 if ERRORLEVEL 1 goto END_FAIL
 popd
 
-goto END
-
 rem Make Installer
 pushd ..\Win64_Inno
-"%ProgramFiles(x86)%\Inno Setup 5\Compil32.exe" /cc Trimmer.iss
+"%ProgramFiles(x86)%\Inno Setup 5\Compil32.exe" /cc Zamp.iss
 if ERRORLEVEL 1 goto END_FAIL
 popd
 
