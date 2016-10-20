@@ -1,1 +1,1 @@
-Zamp uses VLC media player.  It must also be installed prior to use.  You can get it at www.VideoLAN.org.
+Zamp uses VLC media player.  It must also be installed prior to use.  You can get it at www.VideoLAN.org.  You must use the same bitness for VLC and Zamp, e.g. for 64-bit Zamp you need 64-bit VLC (the default download for VLC is 32-bit).
