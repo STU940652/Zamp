@@ -12,6 +12,7 @@ import subprocess
 import datetime
 import json
 import license
+import platform
 from FileDragList import FileDragList
 try:
     import vlc
@@ -66,7 +67,7 @@ class ZampMain (wx.Frame):
                           pos=wx.DefaultPosition, size=(400,300))
         # See if VLC loaded
         if not HAVE_VLC:
-            m = wx.MessageDialog(self, message = "Please download and install VLC Media Player\nfrom www.VideoLAN.org.", 
+            m = wx.MessageDialog(self, message = "Please download and install %s VLC Media Player\nfrom www.VideoLAN.org." % platform.architecture()[0], 
                                 caption = "Could not find VLC Media Player.",
                                 style = wx.ICON_ERROR|wx.OK)
             m.ShowModal()
@@ -477,8 +478,7 @@ class ZampMain (wx.Frame):
             self.timer.Start(milliseconds=100)              
                 
         if (self.menuItems[event.GetId()] == 'Delete'):
-            # Delete this item.  First, delete the data
-            del self.MediaList.ItemDataCollection[self.MediaList.GetItemData(self.ItemIndexRightClicked)]
+            # Delete this item.
             self.MediaList.DeleteItem(self.ItemIndexRightClicked)
             self.UpdateTimes()
             
@@ -513,7 +513,7 @@ Visit us at zamp.sourceforge.net
 The point of this program is to play a list of music, and have the last song end at a specific time.  The "music" can be any file that can be played by VLC, including video.
 
 PREREQUISITES
-Zamp uses VLC media player.  It must also be installed prior to use.  You can get it at www.VideoLAN.org.
+Zamp uses VLC media player.  It must also be installed prior to use.  You can get it at www.VideoLAN.org. You must have the same bitness for VLC and Zamp, e.g. for 64-bit Zamp you need 64-bit VLC (the default download for VLC is 32-bit).
 
 STUFF YOU SHOULD KNOW
 At the moment, you can't add any files with a length of less than 10 seconds.  VLC will happily let you add still images (e.g. JPEGs) to a playlist, which it will show for 10 seconds as a slide show.  So for right now Zamp ignores any files with a time less than 10 seconds.
