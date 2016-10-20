@@ -280,7 +280,7 @@ class ZampMain (wx.Frame):
         start_at = None
         next_start_at = None
         for i in range(self.MediaList.GetItemCount()-1, -1, -1):
-            if (self.MediaList.GetItemCollectionData( i, "start_time") < datetime.datetime.now()):
+            if self.MediaList.GetItemCollectionData( i, "start_time") and (self.MediaList.GetItemCollectionData( i, "start_time") < datetime.datetime.now()):
                 this_media = self.MediaList.GetItemCollectionData( i, "media")
                 this_duration = self.MediaList.GetItemCollectionData( i, "duration")
                 # Find the time to start at
@@ -303,10 +303,10 @@ class ZampMain (wx.Frame):
                 return
 
             # And set time
-            if self.player.set_time(int(start_at.total_seconds() * 1000)) == -1:
-            #if self.player.set_time(int(1)) == -1:
-                print("Failed to set time")
-                return
+            if (start_at > self.delay_between_songs):
+                if self.player.set_time(int(start_at.total_seconds() * 1000)) == -1:
+                    print("Failed to set time")
+                    return
                 
             title = self.player.get_title()
             #  if an error was encountred while retriving the title, then use
@@ -345,6 +345,10 @@ class ZampMain (wx.Frame):
         for i in range( self.MediaList.GetItemCount()):
             if self.MediaList.GetItemTextColour(i) != wx.TheColourDatabase.Find("BLACK"):
                 self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("BLACK"))
+                
+        # Update times in case we were "playing from here"
+        if evt:
+            self.UpdateTimes()
             
     def OnShuffle( self, evt):
         self.MediaList.ShuffleItems()
@@ -445,11 +449,15 @@ class ZampMain (wx.Frame):
         self.Close()
         
     def OnRightClick(self, event):
+        # No menu if playing
+        if self.IsPlayingToEndTime:
+            return
+            
         self.ItemIndexRightClicked = event.GetIndex()
         
         self.menuItems = []     
         self.menuItems.append((wx.NewId(),'Play This'))
-        #self.menuItems.append((wx.NewId(),'Play From Here'))
+        self.menuItems.append((wx.NewId(),'Play From Here'))
         self.menuItems.append((wx.NewId(),'Delete'))
             
         menu = wx.Menu()
@@ -476,6 +484,22 @@ class ZampMain (wx.Frame):
                 title = os.path.basename(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "filename"))
             self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "media").get_meta(vlc.Meta.Title))
             self.timer.Start(milliseconds=100)              
+
+        if (self.menuItems[event.GetId()] == 'Play From Here'):
+            self.OnStop()
+            # Set the start times with this song starting now
+            start_time = datetime.datetime.now()
+            for i in range(self.MediaList.GetItemCount()):
+                if (i >= self.ItemIndexRightClicked):
+                    self.MediaList.SetItemCollectionData( i, "start_time", start_time)
+                    self.MediaList.SetItem( i, 2, start_time.strftime("%I:%M:%S %p"))
+                    start_time += self.MediaList.GetItemCollectionData( i, "duration")
+                    start_time += self.delay_between_songs
+                else:
+                    self.MediaList.SetItemCollectionData( i, "start_time", None)
+                    self.MediaList.SetItem( i, 2, "")
+            self.OnPlay()
+            
                 
         if (self.menuItems[event.GetId()] == 'Delete'):
             # Delete this item.
@@ -537,6 +561,8 @@ PLAYING
 When you click "Play To End", the media will begin playing at whatever song and time that will result in the last song ending at the "Time To End".  Note that there is a 2 second delay between songs.  When playing to end, all of the controls (e.g. adding files, scrubbing) are disabled.
 
 You can also right-click on a song and select "Play This".  You can then use the scrubber to change the time to preview the song.  Play will stop at the end of the song.
+
+Right-click on a song and select "Play From Here" to start that song at the beginning and play to the end of the lise.
 """, style=wx.TE_MULTILINE|wx.TE_AUTO_URL|wx.TE_RICH), flag=wx.ALIGN_CENTER|wx.EXPAND, proportion=1)
         s.Add(m.CreateButtonSizer( wx.OK), flag=wx.ALIGN_CENTER)
         m.SetSizer(s)
