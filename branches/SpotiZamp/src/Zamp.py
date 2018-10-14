@@ -13,12 +13,9 @@ import datetime
 import json
 import license
 import platform
+import spotipy
 from FileDragList import FileDragList
-try:
-    import vlc
-    HAVE_VLC = True
-except:
-    HAVE_VLC = False
+from PasswordDialog import PasswordDialog
 
 # Make sure we are in the correct directory
 application_path = ''
@@ -65,13 +62,7 @@ class ZampMain (wx.Frame):
     def __init__ (self, title):
         wx.Frame.__init__(self, None, -1, title,
                           pos=wx.DefaultPosition, size=(400,300))
-        # See if VLC loaded
-        if not HAVE_VLC:
-            m = wx.MessageDialog(self, message = "Please download and install %s VLC Media Player\nfrom www.VideoLAN.org." % platform.architecture()[0], 
-                                caption = "Could not find VLC Media Player.",
-                                style = wx.ICON_ERROR|wx.OK)
-            m.ShowModal()
-        
+
         # Some variables
         self.delay_between_songs = datetime.timedelta(seconds=2)
         self.IsPlayingToEndTime = False
@@ -82,21 +73,23 @@ class ZampMain (wx.Frame):
         #   File Menu
         self.frame_menubar = wx.MenuBar()
         self.file_menu = wx.Menu()
-        self.file_menu.Append(1, "&Load File", "Load file to playlist..")
-        self.file_menu.Append(2, "Load &Folder", "Load folder to playlist..")
-        self.file_menu.Append(3, "Load &Playlist", "Load playlist from file")
-        self.file_menu.AppendSeparator()
-        self.file_menu.Append(4, "&Save Playlist", "Save playlist to file")
-        self.file_menu.AppendSeparator()
+        # self.file_menu.Append(1, "&Load File", "Load file to playlist..")
+        # self.file_menu.Append(2, "Load &Folder", "Load folder to playlist..")
+        self.file_menu.Append(3, "Load &Playlist", "Load playlist from Spotify")
+        #self.file_menu.AppendSeparator()
+        #self.file_menu.Append(4, "&Save Playlist", "Save playlist to file")
+        #self.file_menu.AppendSeparator()
         self.file_menu.Append(5, "&Clear Playlist", "Remove all files from playlist")
         self.file_menu.AppendSeparator()
-        self.file_menu.Append(6, "&Close", "Quit")
-        self.Bind(wx.EVT_MENU, self.OnLoadFile, id=1)
-        self.Bind(wx.EVT_MENU, self.OnLoadFolder, id=2)
+        self.file_menu.Append(6, "&Update Passwords", "Update user names and passwords")
+        self.file_menu.Append(100, "&Close", "Quit")
+        #self.Bind(wx.EVT_MENU, self.OnLoadFile, id=1)
+        #self.Bind(wx.EVT_MENU, self.OnLoadFolder, id=2)
         self.Bind(wx.EVT_MENU, self.OnLoadPlaylist, id=3)
-        self.Bind(wx.EVT_MENU, self.OnSavePlaylist, id=4)
+        #self.Bind(wx.EVT_MENU, self.OnSavePlaylist, id=4)
         self.Bind(wx.EVT_MENU, self.OnClearPlaylist, id=5)
-        self.Bind(wx.EVT_MENU, self.OnExit, id=6)
+        self.Bind(wx.EVT_MENU, self.OnUpdatePasswords, id=6)
+        self.Bind(wx.EVT_MENU, self.OnExit, id=100)
         self.frame_menubar.Append(self.file_menu, "File")
         
         help_menu = wx.Menu()
@@ -116,9 +109,9 @@ class ZampMain (wx.Frame):
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
 
         # VLC player controls
-        if HAVE_VLC:
-            self.Instance = vlc.Instance()
-            self.player = self.Instance.media_player_new()  
+        #if HAVE_VLC:
+        #    self.Instance = vlc.Instance()
+        #    self.player = self.Instance.media_player_new()  
 
         ctrlpanel = wx.Panel(self, -1 )
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -140,8 +133,6 @@ class ZampMain (wx.Frame):
         play   = wx.Button(ctrlpanel, label="Play To End")
         stop   = wx.Button(ctrlpanel, label="Stop")
         shuffle = wx.Button(ctrlpanel, label="Shuffle")
-        self.volslider = wx.Slider(ctrlpanel, -1, 100, 0, 200, size=(100, -1))
-        self.Bind(wx.EVT_SLIDER, self.OnSetVolume, self.volslider)
 
         # box1 contains the timeslider
         box1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -149,15 +140,13 @@ class ZampMain (wx.Frame):
         box1.Add(self.timeslider, 2)
         box1.Add(self.timeToEndText)
         sizer.Add(box1, flag=wx.EXPAND)
-        # box2 contains some buttons and the volume controls
+        # box2 contains some buttons
         box2 = wx.BoxSizer(wx.HORIZONTAL)
         box2.Add(play, flag=wx.RIGHT, border=5)
         box2.Add(stop)
         box2.Add(shuffle)
         box2.Add((-1, -1), 1)
-        box2.Add(wx.StaticText(ctrlpanel, label="Volume", style=wx.ALIGN_RIGHT))
         sizer.Add(box2, flag=wx.EXPAND)
-        box2.Add(self.volslider, flag=wx.TOP | wx.LEFT, border=5)
         
         self.Bind(wx.EVT_BUTTON, self.OnPlay, play)
         self.Bind(wx.EVT_BUTTON, self.OnStop, stop)
@@ -219,39 +208,7 @@ class ZampMain (wx.Frame):
             end_time += datetime.timedelta(days = 1)
             
         return end_time
-        
-    def OnLoadFile(self, evt):
-        """Pop up a new dialow window to choose a file, then play the selected file.
-        """
-        # Create a file dialog opened in the current home directory, where
-        # you can display all kind of files, having as title "Choose a file".
-        dlg = wx.FileDialog(self, "Choose files to add", 
-                            wildcard="*.*",  
-                            style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST|wx.FD_MULTIPLE)
-        if dlg.ShowModal() == wx.ID_OK:
-            # Add to list
-            self.MediaList.InsertItems(items=dlg.GetPaths())
-
-        # finally destroy the dialog
-        dlg.Destroy()
-        
-    def OnLoadFolder(self, evt):
-        """Pop up a new dialow window to choose a file, then play the selected file.
-        """
-        # Create a file dialog opened in the current home directory, where
-        # you can display all kind of files, having as title "Choose a file".
-        dlg = wx.DirDialog(self, "Choose folder to add",  
-                            style=wx.DD_DIR_MUST_EXIST)
-        if dlg.ShowModal() == wx.ID_OK:
-            # Add to list
-            file_list = []
-            for dirpath, dirnames, filenames in os.walk(dlg.GetPath()):
-                file_list.extend([os.path.join(dirpath, f) for f in filenames])
-            self.MediaList.InsertItems(items=file_list)
-
-        # finally destroy the dialog
-        dlg.Destroy()
-        
+                
     def OnPlay(self, evt=None):
         """Toggle the status to Play/Pause.
 
@@ -260,7 +217,6 @@ class ZampMain (wx.Frame):
         self.StartNextSong()
         self.IsPlayingToEndTime = True
         self.timer.Start(milliseconds=100)
-        self.OnSetVolume()
         
         #Disable stuff to make playing safe
         for w in self.DisableDuringPlayList:
@@ -392,56 +348,33 @@ class ZampMain (wx.Frame):
             self.OnStop()
 
     def OnSetTime(self, evt):
-        """Set the volume according to the volume sider.
+        """Set the time according to the time sider.
         """
         if self.IsPlayingToEndTime:
             return
         slideTime = self.timeslider.GetValue()
-        # vlc.MediaPlayer.audio_set_volume returns 0 if success, -1 otherwise
         if self.player.set_time(slideTime) == -1:
             print("Failed to set time")
 
-    def OnSetVolume(self, evt=None):
-        """Set the volume according to the volume sider.
-        """
-        # vlc.MediaPlayer.audio_set_volume returns 0 if success, -1 otherwise
-        if self.player.audio_set_volume(self.volslider.GetValue()) == -1:
-            print("Failed to set volume")
-
     def OnLoadPlaylist( self, evt):
-        dlg = wx.FileDialog(self, "Load Playlist", 
-                            wildcard="ZAMP Playlist (*.zamp)|*.zamp",  
-                            style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
-        if dlg.ShowModal() == wx.ID_OK:
-            # Add to list
-            with open( dlg.GetPath(), "rt") as f:
-                d = json.load(f)
-                self.MediaList.InsertItems(items=d["media_paths"])
-
-        # finally destroy the dialog
-        dlg.Destroy()
-        
-    def OnSavePlaylist( self, evt):
-        # Create a file dialog opened in the current home directory, where
-        # you can display all kind of files, having as title "Choose a file".
-        dlg = wx.FileDialog(self, "Save Playlist", 
-                            wildcard="ZAMP Playlist (*.zamp)|*.zamp",  
-                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
-        if dlg.ShowModal() == wx.ID_OK:
-            # Roll up the media file paths
-            l = []
-            for i in range( self.MediaList.GetItemCount()):
-                l.append(self.MediaList.GetItemCollectionData( i, "filename"))
-                with open( dlg.GetPath(), "wt") as f:
-                    json.dump({"media_paths" : l}, f)            
-
-        # finally destroy the dialog
-        dlg.Destroy()
-        
+        pass
+#        dlg = wx.FileDialog(self, "Load Playlist", 
+#                            wildcard="ZAMP Playlist (*.zamp)|*.zamp",  
+#                            style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
+#        if dlg.ShowModal() == wx.ID_OK:
+#            # Add to list
+#            with open( dlg.GetPath(), "rt") as f:
+#                d = json.load(f)
+#                self.MediaList.InsertItems(items=d["media_paths"])
+#
+#        # finally destroy the dialog
+#        dlg.Destroy()
+#                
     def OnClearPlaylist( self, evt):
-        self.MediaList.DeleteAllItems()
-        self.MediaList.ItemDataCollection = {}
-        self.UpdateTimes()
+        pass
+#        self.MediaList.DeleteAllItems()
+#        self.MediaList.ItemDataCollection = {}
+#        self.UpdateTimes()
     
     def OnExit(self, evt):
         """Closes the window.
@@ -505,7 +438,12 @@ class ZampMain (wx.Frame):
             # Delete this item.
             self.MediaList.DeleteItem(self.ItemIndexRightClicked)
             self.UpdateTimes()
-            
+        
+    def OnUpdatePasswords (self, evt):
+        p = PasswordDialog()
+        p.ShowModal()
+        p.Destroy()
+        
     def OnShowAbout(self, event):
         m = wx.Dialog( self, title="About...")
         s = wx.BoxSizer(wx.VERTICAL)
