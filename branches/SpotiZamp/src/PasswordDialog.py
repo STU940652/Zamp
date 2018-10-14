@@ -9,6 +9,7 @@ import urllib.parse
 import io
 import spotipy
 import spotipy.util
+import spotipy.oauth2
 
 # Selenium for Spotify
 from selenium import webdriver
@@ -82,19 +83,26 @@ class PasswordDialog(wx.Dialog):
     def OnSpotifyAuthenticate (self, evt):
         end_url = "http://localhost/AuthEnd/"
         try:
-            spotipy.util.prompt_for_user_token(
-                username="andyndeanna@gmail.com",
-                scope='user-library-read',
-                client_id=Credentials["Spotify_Client_Id"],
-                client_secret=Credentials["Spotify_Client_Secret"],
-                redirect_uri=end_url)
+        
+            sp_oauth = spotipy.oauth2.SpotifyOAuth(
+                Credentials["Spotify_Client_Id"], 
+                Credentials["Spotify_Client_Secret"], 
+                end_url, scope='user-library-read')
                 
+            Spotify_authorization_url = sp_oauth.get_authorize_url()
+             
+            #spotipy.util.prompt_for_user_token(
+            #    username="andyndeanna@gmail.com",
+            #    scope='user-library-read',
+            #    client_id=Credentials["Spotify_Client_Id"],
+            #    client_secret=Credentials["Spotify_Client_Secret"],
+            #    redirect_uri=end_url)
+            #    
             code_from_url = ""
-            return
-            """This section is used to determine where to direct the user."""
-            Spotify_authorization_url = v.auth_url(['upload', 'edit'], end_url, state = "INITIAL")
 
             # Your application should now redirect to Spotify_authorization_url.
+            # options = webdriver.ChromeOptions()
+            # options.add_argument("--user-data-dir=/home/username/.config/google-chrome")
             browser = webdriver.Chrome()
             # Visit URL
             browser.get(Spotify_authorization_url)
@@ -109,10 +117,10 @@ class PasswordDialog(wx.Dialog):
                     still_going = False 
 
             authorized_params = urllib.parse.parse_qs(urllib.parse.urlparse(authorized_url).query)
-
-            if authorized_params['state'] == ["INITIAL"]:
-                code_from_url = authorized_params['code'][0]
-                #print (code_from_url)
+            print (authorized_params)
+            if 'code' in authorized_params:
+                code_from_url = authorized_params['code']
+                print (code_from_url)
 
             """This section completes the authentication for the user."""
             # You should retrieve the "code" from the URL string Spotify redirected to.  Here that's named CODE_FROM_URL
