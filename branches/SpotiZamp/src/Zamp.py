@@ -14,6 +14,7 @@ import json
 import license
 import platform
 import spotipy
+import traceback
 from FileDragList import FileDragList
 from PasswordDialog import PasswordDialog
 from Credentials import Credentials
@@ -117,6 +118,15 @@ class ZampMain (wx.Frame):
         ctrlpanel = wx.Panel(self, -1 )
         sizer = wx.BoxSizer(wx.VERTICAL)
         
+        sizer.Add(wx.StaticText(ctrlpanel, label="Player"), 0, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.EXPAND, border=2)
+        self.playerSelect = wx.ComboBox(ctrlpanel)
+        sizer.Add(self.playerSelect, 0, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, border=2)
+        
+        sizer.Add(wx.StaticText(ctrlpanel, label="Play List"), 0, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.EXPAND, border=2)
+        self.playlistSelect = wx.ComboBox(ctrlpanel)
+        sizer.Add(self.playlistSelect, 0, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, border=2)
+        self.Bind(wx.EVT_COMBOBOX, self.OnLoadPlaylist, self.playlistSelect)
+        
         self.MediaList = FileDragList(AfterChangeCB=self.UpdateTimes, parent=ctrlpanel, style=wx.LC_REPORT)
         self.MediaList.InsertColumn(0, "Name", width=200)
         self.MediaList.InsertColumn(1, "Duration", wx.LIST_FORMAT_RIGHT)
@@ -173,42 +183,36 @@ class ZampMain (wx.Frame):
         ctrlpanel.SetSizer(sizer)
         self.SetMinSize( (300,200) )
         
-        # Some Spotify tests
-        # print(sp.me())
-        # print (Credentials["Spotify_User_Token"])
-        sp = spotipy.client.Spotify(auth=Credentials["Spotify_User_Token"])
-        #
-        # List playlists and tracks
-        #
-        def show_tracks(tracks):
-            for item in tracks['items']:
-                track = item['track']
-                screen_name = "%s (%s)" % (track['name'], track['artists'][0]['name'])
-                duration_ms = track['duration_ms']
-                print ('  ', screen_name, ms_to_hms(duration_ms))
-        
-        playlists = sp.current_user_playlists()
-        for playlist in playlists['items']:
-            print (playlist['name'], playlist['uri'])
+        if (Credentials["Spotify_User_Token"]):
+            self.InitSpotify()
+
+    def InitSpotify (self):
+        try:
+            self.sp = spotipy.client.Spotify(auth=Credentials["Spotify_User_Token"])
             
-        results = sp.user_playlist(user=playlist['owner']['id'],
-            playlist_id=playlist['id'],
-            fields="tracks,next")
-        tracks = results['tracks']
-        show_tracks(tracks)
-        while tracks['next']:
-            tracks = sp.next(tracks)
-            show_tracks(tracks)  
+            #
+            # Player Selector
+            #
+            self.playerSelect.Clear()
 
-        #
-        # List devices
-        #
-        devices = sp._get("me/player/devices") # aka. sp.devices()
+            devices = self.sp._get("me/player/devices") # aka. sp.devices()
+            for device in devices['devices']:
+                if device['is_active']:
+                    self.playerSelect.Append("%s - %s"%(device['name'], device['type']), device["id"]) 
 
-        for device in devices['devices']:
-            if device['is_active']:
-                print (device['name'], device['type'])
-        
+            self.playerSelect.SetSelection(0)
+            
+            #
+            # Playlist selector
+            #
+            self.playlistSelect.Clear()
+            playlists = self.sp.current_user_playlists()
+            for playlist in playlists['items']:
+                self.playlistSelect.Append(playlist['name'], playlist)
+            self.playlistSelect.SetSelection(0)
+        except:
+            traceback.print_exc()
+
     def OnEndTimeChange (self, evt):
         # Clean up EndTime
         end_time = self.EndDateTime()
@@ -394,7 +398,35 @@ class ZampMain (wx.Frame):
             print("Failed to set time")
 
     def OnLoadPlaylist( self, evt):
-        pass
+        #
+        # Load playlists and tracks
+        #
+        def show_tracks(tracks):
+            for item in tracks['items']:
+                track = item['track']
+                screen_name = "%s (%s)" % (track['name'], track['artists'][0]['name'])
+                duration_ms = track['duration_ms']
+                print ('  ', screen_name, ms_to_hms(duration_ms))
+                self.MediaList.InsertItems(items=[{
+                    "idx":0,
+                    "text": [screen_name, ms_to_hms(duration_ms)],
+                    "data": 7 #{
+                            #"duration":duration_ms, 
+                            #"id":track['id']}
+                    }])
+                
+        index = self.playlistSelect.GetSelection()
+        playlist = self.playlistSelect.GetClientData(index)
+        print (playlist)
+        results = self.sp.user_playlist(user=playlist['owner']['id'],
+            playlist_id=playlist['id'],
+            fields="tracks,next")
+        tracks = results['tracks']
+        show_tracks(tracks)
+        while tracks['next']:
+            tracks = sp.next(tracks)
+            show_tracks(tracks)  
+
 #        dlg = wx.FileDialog(self, "Load Playlist", 
 #                            wildcard="ZAMP Playlist (*.zamp)|*.zamp",  
 #                            style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
@@ -408,10 +440,9 @@ class ZampMain (wx.Frame):
 #        dlg.Destroy()
 #                
     def OnClearPlaylist( self, evt):
-        pass
-#        self.MediaList.DeleteAllItems()
-#        self.MediaList.ItemDataCollection = {}
-#        self.UpdateTimes()
+        self.MediaList.DeleteAllItems()
+        self.MediaList.ItemDataCollection = {}
+        self.UpdateTimes()
     
     def OnExit(self, evt):
         """Closes the window.

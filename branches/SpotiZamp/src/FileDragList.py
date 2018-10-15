@@ -6,14 +6,6 @@ import datetime
 import os
 import os.path
 import random
-
-try:
-    import vlc
-    HAVE_VLC = True
-except:
-    HAVE_VLC = False
-    
-#print (vlc.libvlc_get_version())
     
 def ms_to_hms (ms):
     try:
@@ -135,24 +127,20 @@ class FileDragList(wx.ListCtrl):
         if index == None:
             index = self.GetItemCount()
             
-        for this_item in items:
+        for this_item in items:   
             if (isinstance( this_item, str)):
-                # Filename as a string
-                media = vlc.Media(this_item)
-                media.parse()
-                if (media.get_duration() > (10*1000)):
-                    # Only add if length is > 10s.  VLC assigns a length of 10 seconds to jpegs, etc.
-                    self.InsertItem(index, media.get_meta(vlc.Meta.Title))
-                    self.SetItem(index=index, column = 1, label = ms_to_hms(media.get_duration()))
-                    self.SetItemData(index, self.ItemId)
-                    self.ItemDataCollection[self.ItemId] = {
-                            "duration":datetime.timedelta(milliseconds = media.get_duration()), 
-                            "media":media, 
-                            "filename":this_item}
-                    self.ItemId += 1
-                    index += 1
-                    
-            elif (isinstance( this_item, dict)):
+                # Only add if length is > 10s.  VLC assigns a length of 10 seconds to jpegs, etc.
+                self.InsertItem(index, media.get_meta(vlc.Meta.Title))
+                self.SetItem(index=index, column = 1, label = ms_to_hms(media.get_duration()))
+                self.SetItemData(index, self.ItemId)
+                self.ItemDataCollection[self.ItemId] = {
+                        "duration":datetime.timedelta(milliseconds = media.get_duration()), 
+                        "media":media, 
+                        "filename":this_item}
+                self.ItemId += 1
+                index += 1
+        
+            if (isinstance( this_item, dict)):
                 # Dropped ListItem
                 textList = this_item["text"]
                 self.InsertItem(index, textList[0])
