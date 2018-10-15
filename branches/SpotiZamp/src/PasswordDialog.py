@@ -83,55 +83,15 @@ class PasswordDialog(wx.Dialog):
     def OnSpotifyAuthenticate (self, evt):
         end_url = "http://localhost/AuthEnd/"
         try:
-        
-            sp_oauth = spotipy.oauth2.SpotifyOAuth(
-                Credentials["Spotify_Client_Id"], 
-                Credentials["Spotify_Client_Secret"], 
-                end_url, scope='user-library-read')
+            token = spotipy.util.prompt_for_user_token(
+                username="delete-me",
+                scope='user-library-read playlist-read-private user-modify-playback-state user-read-currently-playing user-read-playback-state',
+                client_id=Credentials["Spotify_Client_Id"],
+                client_secret=Credentials["Spotify_Client_Secret"],
+                redirect_uri=end_url)
                 
-            Spotify_authorization_url = sp_oauth.get_authorize_url()
-             
-            #spotipy.util.prompt_for_user_token(
-            #    username="andyndeanna@gmail.com",
-            #    scope='user-library-read',
-            #    client_id=Credentials["Spotify_Client_Id"],
-            #    client_secret=Credentials["Spotify_Client_Secret"],
-            #    redirect_uri=end_url)
-            #    
-            code_from_url = ""
-
-            # Your application should now redirect to Spotify_authorization_url.
-            # options = webdriver.ChromeOptions()
-            # options.add_argument("--user-data-dir=/home/username/.config/google-chrome")
-            browser = webdriver.Chrome()
-            # Visit URL
-            browser.get(Spotify_authorization_url)
-            
-            # Wait until URL = end_url
-            still_going = True
-            while still_going:
-                time.sleep(0.5)
-                if end_url.split(":", 1)[-1] in browser.current_url:
-                    authorized_url = browser.current_url
-                    browser.quit()
-                    still_going = False 
-
-            authorized_params = urllib.parse.parse_qs(urllib.parse.urlparse(authorized_url).query)
-            print (authorized_params)
-            if 'code' in authorized_params:
-                code_from_url = authorized_params['code']
-                print (code_from_url)
-
-            """This section completes the authentication for the user."""
-            # You should retrieve the "code" from the URL string Spotify redirected to.  Here that's named CODE_FROM_URL
-            try:
-                token, user, scope = v.exchange_code(code_from_url, end_url)
-                #print(token, user, scope)
-                self.Spotify_User_Token.SetValue(token)
-                
-            except Spotify.auth.GrantFailed:
-                m = wx.MessageDialog(self, traceback.format_exc(), "Spotify Authentication Error", wx.OK)
-                m.ShowModal()
+            print (token)
+            self.Spotify_User_Token.SetValue(token)
 
         except:
             m = wx.MessageDialog(self, traceback.format_exc(), "Spotify Authentication Error", wx.OK)
