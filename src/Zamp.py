@@ -16,6 +16,7 @@ import platform
 import spotipy
 from FileDragList import FileDragList
 from PasswordDialog import PasswordDialog
+from Credentials import Credentials
 
 # Make sure we are in the correct directory
 application_path = ''
@@ -171,6 +172,42 @@ class ZampMain (wx.Frame):
 
         ctrlpanel.SetSizer(sizer)
         self.SetMinSize( (300,200) )
+        
+        # Some Spotify tests
+        # print(sp.me())
+        # print (Credentials["Spotify_User_Token"])
+        sp = spotipy.client.Spotify(auth=Credentials["Spotify_User_Token"])
+        #
+        # List playlists and tracks
+        #
+        def show_tracks(tracks):
+            for item in tracks['items']:
+                track = item['track']
+                screen_name = "%s (%s)" % (track['name'], track['artists'][0]['name'])
+                duration_ms = track['duration_ms']
+                print ('  ', screen_name, ms_to_hms(duration_ms))
+        
+        playlists = sp.current_user_playlists()
+        for playlist in playlists['items']:
+            print (playlist['name'], playlist['uri'])
+            
+        results = sp.user_playlist(user=playlist['owner']['id'],
+            playlist_id=playlist['id'],
+            fields="tracks,next")
+        tracks = results['tracks']
+        show_tracks(tracks)
+        while tracks['next']:
+            tracks = sp.next(tracks)
+            show_tracks(tracks)  
+
+        #
+        # List devices
+        #
+        devices = sp._get("me/player/devices") # aka. sp.devices()
+
+        for device in devices['devices']:
+            if device['is_active']:
+                print (device['name'], device['type'])
         
     def OnEndTimeChange (self, evt):
         # Clean up EndTime
