@@ -84,13 +84,13 @@ class PasswordDialog(wx.Dialog):
         end_url = "http://localhost/AuthEnd/"
         try:
             token = spotipy.util.prompt_for_user_token(
-                username="delete-me",
+                username="default",
                 scope='user-library-read playlist-read-private user-modify-playback-state user-read-currently-playing user-read-playback-state',
                 client_id=Credentials["Spotify_Client_Id"],
                 client_secret=Credentials["Spotify_Client_Secret"],
-                redirect_uri=end_url)
-                
-            print (token)
+                redirect_uri=end_url,
+                cache_path = os.path.join(ZampConfig.get('FilePaths', 'LogPath'), "auth-cache"))
+
             self.Spotify_User_Token.SetValue(token)
 
         except:

@@ -8,6 +8,7 @@ Credentials = {}
 Credentials["Spotify_Client_Id"] = ""
 Credentials["Spotify_Client_Secret"] = ""
 Credentials["Spotify_User_Token"] = ""
+Credentials["Spotify_Refresh_Token"] = ""
 
 # LoadCredentials ():
 try:

@@ -122,6 +122,22 @@ class FileDragList(wx.ListCtrl):
                 index += 1
                 
         self.InsertItems (index, items)
+        
+    def AppendNewItem (self, title, duration_ms, track):
+        index = self.GetItemCount()
+            
+        self.InsertItem(index, title)
+        self.SetItem(index=index, column = 1, label = ms_to_hms(duration_ms))
+        self.SetItemData(index, self.ItemId)
+        self.ItemDataCollection[self.ItemId] = {
+            "duration" : datetime.timedelta(milliseconds = duration_ms), 
+            "media": track,
+            "filename": title
+            }
+        self.ItemId += 1
+
+        if self.AfterChangeCB:
+            self.AfterChangeCB()        
 
     def InsertItems (self, index = None, items = []):
         if index == None:
