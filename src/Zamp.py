@@ -112,11 +112,6 @@ class ZampMain (wx.Frame):
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
 
-        # VLC player controls
-        #if HAVE_VLC:
-        #    self.Instance = vlc.Instance()
-        #    self.player = self.Instance.media_player_new()  
-
         ctrlpanel = wx.Panel(self, -1 )
         sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -212,8 +207,7 @@ class ZampMain (wx.Frame):
             devices = self.sp._get("me/player/devices") # aka. sp.devices()
             for device in devices['devices']:
                 if device['is_active']:
-                    self.playerSelect.Append("%s - %s"%(device['name'], device['type']), device["id"]) 
-
+                    self.playerSelect.Append("%s - %s"%(device['name'], device['type']), device["id"])
             self.playerSelect.SetSelection(0)
             
             #
@@ -269,10 +263,6 @@ class ZampMain (wx.Frame):
         return end_time
                 
     def OnPlay(self, evt=None):
-        """Toggle the status to Play/Pause.
-
-        If no file is loaded, open the dialog window.
-        """
         self.StartNextSong()
         self.IsPlayingToEndTime = True
         self.timer.Start(milliseconds=100)
@@ -290,13 +280,13 @@ class ZampMain (wx.Frame):
                 self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("BLACK"))
     
         # First find the file to play
-        this_media = None
+        this_id = None
         this_duration = None
         start_at = None
         next_start_at = None
         for i in range(self.MediaList.GetItemCount()-1, -1, -1):
             if self.MediaList.GetItemCollectionData( i, "start_time") and (self.MediaList.GetItemCollectionData( i, "start_time") < datetime.datetime.now()):
-                this_media = self.MediaList.GetItemCollectionData( i, "media")
+                this_id = self.MediaList.GetItemCollectionData( i, "id")
                 this_duration = self.MediaList.GetItemCollectionData( i, "duration")
                 # Find the time to start at
                 start_at = datetime.datetime.now() - self.MediaList.GetItemCollectionData( i, "start_time")
@@ -306,29 +296,16 @@ class ZampMain (wx.Frame):
                 break
             next_start_at = self.MediaList.GetItemCollectionData( i, "start_time")
             
-        if this_media and (start_at > this_duration):
-            this_media = None
+        if this_id and (start_at > this_duration):
+            this_id = None
         
         # Play
-        if this_media:
-            self.player.stop()
-            self.player.set_media(this_media)
-            if self.player.play() == -1:
-                print("Unable to play.")
-                return
+        if this_id:
+            self.sp.start_playback(device_id=self._device_id(), 
+                uris=[this_id], 
+                offset=int(start_at.total_seconds() * 1000) if (start_at > self.delay_between_songs) else None )
 
-            # And set time
-            if (start_at > self.delay_between_songs):
-                if self.player.set_time(int(start_at.total_seconds() * 1000)) == -1:
-                    print("Failed to set time")
-                    return
-                
-            title = self.player.get_title()
-            #  if an error was encountred while retriving the title, then use
-            #  filename
-            if title == -1:
-                title = os.path.basename(self.MediaList.GetItemCollectionData( i, "filename"))
-            self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( i, "media").get_meta(vlc.Meta.Title))
+            self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( i, "filename"))
             self.TimerBlank = 2
             
         elif next_start_at:
@@ -343,7 +320,10 @@ class ZampMain (wx.Frame):
         """Stop the player.
         """
         self.IsPlayingToEndTime = False
-        self.player.stop()
+        try:
+            self.sp.pause_playback(device_id=self._device_id())
+        except:
+            traceback.print_exc()
         self.timer.Stop()
         self.StatusBar.SetStatusText("")
         self.timeslider.SetValue(0)
@@ -379,7 +359,11 @@ class ZampMain (wx.Frame):
         
         # See if we need to start the next song
         time_until_start = None
-        if self.IsPlayingToEndTime and not self.player.is_playing():
+        
+        player_info = self.sp._get("me/player") # device_id=self._device_id()
+        is_playing = player_info["is_playing"]
+        
+        if self.IsPlayingToEndTime and not player_info["is_playing"]:
             time_until_start = self.StartNextSong()
             
             if time_until_start:
@@ -387,14 +371,13 @@ class ZampMain (wx.Frame):
                 self.timeText.SetLabel("")
                 self.timeToEndText.SetLabel(ms_to_hms(time_until_start.total_seconds() * 1000))
             
-        elif self.player.is_playing():
-            # since the self.player.get_length can change while playing,
+        elif player_info["is_playing"]:
             # re-set the timeslider to the correct range.
-            length = self.player.get_length()
+            length = player_info["item"]["duration_ms"]
             self.timeslider.SetRange(-1, length)
             
             # update the time on the slider
-            CurrentTime = self.player.get_time()
+            CurrentTime = player_info["progress_ms"]
             self.timeslider.SetValue(CurrentTime)
             self.timeText.SetLabel(ms_to_hms(CurrentTime))     
             self.timeToEndText.SetLabel(ms_to_hms(length - CurrentTime))
@@ -412,10 +395,10 @@ class ZampMain (wx.Frame):
         if self.IsPlayingToEndTime:
             return
         slideTime = self.timeslider.GetValue()
-        if self.player.set_time(slideTime) == -1:
-            print("Failed to set time")
+        self.sp.seek_track (slideTime, self._device_id())
 
     def OnLoadPlaylist( self, evt=None):
+        self.OnClearPlaylist()
         #
         # Load playlists and tracks
         #
@@ -436,20 +419,8 @@ class ZampMain (wx.Frame):
         while tracks['next']:
             tracks = sp.next(tracks)
             show_tracks(tracks)  
-
-#        dlg = wx.FileDialog(self, "Load Playlist", 
-#                            wildcard="ZAMP Playlist (*.zamp)|*.zamp",  
-#                            style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
-#        if dlg.ShowModal() == wx.ID_OK:
-#            # Add to list
-#            with open( dlg.GetPath(), "rt") as f:
-#                d = json.load(f)
-#                self.MediaList.InsertItems(items=d["media_paths"])
-#
-#        # finally destroy the dialog
-#        dlg.Destroy()
-#                
-    def OnClearPlaylist( self, evt):
+            
+    def OnClearPlaylist( self, evt=None):
         self.MediaList.DeleteAllItems()
         self.MediaList.ItemDataCollection = {}
         self.UpdateTimes()
@@ -480,20 +451,21 @@ class ZampMain (wx.Frame):
         self.PopupMenu (menu, event.GetPoint())
         menu.Destroy
 
+    def _device_id(self):
+        return self.playerSelect.GetClientData(self.playerSelect.GetSelection())
+        
     def OnRightMenuSelect(self, event):
         """
         Handle a right-click event.
         """
         if (self.menuItems[event.GetId()] == 'Play This'):
-            self.OnStop()
-            self.player.set_media(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "media"))
-            if self.player.play() == -1:
-                print("Unable to play.")
-                return
-            title = self.player.get_title()
-            if title == -1:
-                title = os.path.basename(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "filename"))
-            self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "media").get_meta(vlc.Meta.Title))
+            #self.sp.seek_track(10e+3, device_id=self._device_id())
+            #self.sp.pause_playback(device_id=self._device_id())
+            
+            #self.sp.start_playback(device_id=self._device_id(), 
+            #    uris=[self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "id")])
+                
+            self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "filename"))
             self.timer.Start(milliseconds=100)              
 
         if (self.menuItems[event.GetId()] == 'Play From Here'):

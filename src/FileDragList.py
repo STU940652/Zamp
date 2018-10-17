@@ -132,7 +132,8 @@ class FileDragList(wx.ListCtrl):
         self.ItemDataCollection[self.ItemId] = {
             "duration" : datetime.timedelta(milliseconds = duration_ms), 
             "media": track,
-            "filename": title
+            "filename": title,
+            "id": track['id']
             }
         self.ItemId += 1
 
