@@ -302,9 +302,10 @@ class ZampMain (wx.Frame):
         # Play
         if this_id:
             self.sp.start_playback(device_id=self._device_id(), 
-                uris=[this_id], 
-                offset=int(start_at.total_seconds() * 1000) if (start_at > self.delay_between_songs) else None )
-
+                uris=[this_id])
+            
+            self.sp.seek_track(device_id=self._device_id(), position_ms=int(start_at.total_seconds() * 1000))
+                
             self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( i, "filename"))
             self.TimerBlank = 2
             
@@ -361,6 +362,8 @@ class ZampMain (wx.Frame):
         time_until_start = None
         
         player_info = self.sp._get("me/player") # device_id=self._device_id()
+        if not player_info:
+            return
         is_playing = player_info["is_playing"]
         
         if self.IsPlayingToEndTime and not player_info["is_playing"]:
@@ -459,11 +462,8 @@ class ZampMain (wx.Frame):
         Handle a right-click event.
         """
         if (self.menuItems[event.GetId()] == 'Play This'):
-            #self.sp.seek_track(10e+3, device_id=self._device_id())
-            #self.sp.pause_playback(device_id=self._device_id())
-            
-            #self.sp.start_playback(device_id=self._device_id(), 
-            #    uris=[self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "id")])
+            self.sp.start_playback( device_id=self._device_id(), 
+                uris=[self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "id")])
                 
             self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( self.ItemIndexRightClicked, "filename"))
             self.timer.Start(milliseconds=100)              
