@@ -133,7 +133,7 @@ class FileDragList(wx.ListCtrl):
             "duration" : datetime.timedelta(milliseconds = duration_ms), 
             "media": track,
             "filename": title,
-            "id": track['id']
+            "id": track['uri']
             }
         self.ItemId += 1
 
