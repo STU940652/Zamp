@@ -68,7 +68,7 @@ class ZampMain (wx.Frame):
                           pos=wx.DefaultPosition, size=(400,300))
 
         # Some variables
-        self.delay_between_songs = datetime.timedelta(seconds=0)
+        self.delay_between_songs = datetime.timedelta(seconds=0.5)
         self.IsPlayingToEndTime = False
         self.DisableDuringPlayList = []
         self.TimerBlank = 0
