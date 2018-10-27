@@ -301,10 +301,11 @@ class ZampMain (wx.Frame):
         
         # Play
         if this_id:
-            self.sp.start_playback(device_id=self._device_id(), 
-                uris=[this_id])
-            
-            self.sp.seek_track(device_id=self._device_id(), position_ms=int(start_at.total_seconds() * 1000))
+            data = {}
+            data['uris'] = [this_id]
+            if (start_at > self.delay_between_songs):
+                data['position_ms'] = int(start_at.total_seconds() * 1000)
+            self.sp._put(self.sp._append_device_id("me/player/play", device_id=self._device_id()), payload=data)
                 
             self.StatusBar.SetStatusText(self.MediaList.GetItemCollectionData( i, "filename"))
             self.TimerBlank = 2
