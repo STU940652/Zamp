@@ -68,7 +68,7 @@ class ZampMain (wx.Frame):
                           pos=wx.DefaultPosition, size=(400,300))
 
         # Some variables
-        self.delay_between_songs = datetime.timedelta(seconds=2)
+        self.delay_between_songs = datetime.timedelta(seconds=0)
         self.IsPlayingToEndTime = False
         self.DisableDuringPlayList = []
         self.TimerBlank = 0
@@ -280,29 +280,28 @@ class ZampMain (wx.Frame):
                 self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("BLACK"))
     
         # First find the file to play
-        this_id = None
+        uris = []
         this_duration = None
         start_at = None
         next_start_at = None
         for i in range(self.MediaList.GetItemCount()-1, -1, -1):
             if self.MediaList.GetItemCollectionData( i, "start_time") and (self.MediaList.GetItemCollectionData( i, "start_time") < datetime.datetime.now()):
-                this_id = self.MediaList.GetItemCollectionData( i, "id")
                 this_duration = self.MediaList.GetItemCollectionData( i, "duration")
                 # Find the time to start at
                 start_at = datetime.datetime.now() - self.MediaList.GetItemCollectionData( i, "start_time")
+                if (start_at > this_duration):
+                    break
                 # Highlight the song playing
-                self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("RED"))  
-        
+                self.MediaList.SetItemTextColour(i, wx.TheColourDatabase.Find("RED"))
+                for j in range(i, self.MediaList.GetItemCount()):
+                    uris.append(self.MediaList.GetItemCollectionData( j, "id"))
                 break
             next_start_at = self.MediaList.GetItemCollectionData( i, "start_time")
             
-        if this_id and (start_at > this_duration):
-            this_id = None
-        
         # Play
-        if this_id:
+        if uris:
             data = {}
-            data['uris'] = [this_id]
+            data['uris'] = uris
             if (start_at > self.delay_between_songs):
                 data['position_ms'] = int(start_at.total_seconds() * 1000)
             self.sp._put(self.sp._append_device_id("me/player/play", device_id=self._device_id()), payload=data)
